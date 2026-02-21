@@ -8,12 +8,13 @@ module tinymoa_register_file #(parameter REG_COUNT = 16) (
     // input nrst, // Wasted existance.
     input write_en,
 
+    // Counts the currently addressed nibble from 0 to 7
     input [2:0] nibble_counter,
 
     input [4:0] read_addr_a, // rs1 (port A)
     input [4:0] read_addr_b, // rs2 (port B)
     input [4:0] write_dest,  // rd writeback addr
-    input [3:0] data_rd,                    // data to write to write_dest (rd)
+    input [3:0] data_rd,     // data to write to write_dest (rd)
 
     output [3:0] data_port_a,
     output [3:0] data_port_b,
@@ -31,9 +32,20 @@ module tinymoa_register_file #(parameter REG_COUNT = 16) (
             if (i == 0) begin : gen_reg_x0
                 assign register_access[i] = 4'h0;
             end else if (i == 3) begin : gen_reg_gp
+
+                // Generate a "pseudo-harcoded" dynamic combinational value to produce `0x01000400` for the global pointer (gp)
+                // Since we read over 8 cycles and update nibble_counter each cycle, we reuse that wire to generate the value
+                // This saves us something like 32 FFs by using 2 comparators and simple combinational logic for a 32b value
+                // 0x01000400 = 0000_0001_0000_0000_0000_0100_0000_0000
+                // Nibble #   =    7    6    5    4    3    2    1    0
                 assign register_access[i] = {1'b0, (nibble_counter == 2), 1'b0, (nibble_counter == 6)};
             end else if (i == 4) begin : gen_reg_tp
-                assign register_access[i] = ((counter == 6), 3'b0);
+
+                // Generate a pseudo-hardcoded value to produce `0x8000000` for the thread pointer (tp) register
+                // See the above note on how/why (NOTE: We only use 1 comparator here since only 1 nibble is non-zero)
+                // 0x8000000  = 0000_1000_0000_0000_0000_0000_0000_0000
+                // Nibble #   =    7    6    5    4    3    2    1    0
+                assign register_access[i] = ((nibble_counter == 6), 3'b0);
             end else begin : gen_reg_normal
                 always @(posedge clk) begin
                     if (write_en && write_dest == i)
@@ -65,8 +77,9 @@ module tinymoa_counter (
     input clk,
     input nrst,
 
+    // Counts the currently addressed nibble from 0 to 7
+    input [2:0] nibble_counter,
     input increment,
-    input [2:0] nibble_counter, // Counts the currently addressed nibble from 0 to 7
 
     output [3:0] data,
     output carry_out
