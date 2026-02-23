@@ -11,6 +11,20 @@ TEST_DIR = Path(__file__).parent.resolve()
 SRC_DIR = f"{TEST_DIR.parent}/src"
 
 
+def test_alu():
+    simulator.run(
+        verilog_sources=[
+            f"{SRC_DIR}/cpu/alu.v",
+            f"{TEST_DIR}/unit/alu/tb_alu.v",
+        ],
+        toplevel="tb_alu",
+        module="unit.alu.test_alu",
+        simulator="icarus",
+        work_dir=f"{TEST_DIR}/sim_build/alu",
+        python_search=[str(TEST_DIR)],
+    )
+
+
 def test_registers():
     simulator.run(
         verilog_sources=[
