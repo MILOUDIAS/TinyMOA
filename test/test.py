@@ -1,58 +1,43 @@
-# SPDX-FileCopyrightText: © 2024 Tiny Tapeout
-# SPDX-License-Identifier: Apache-2.0
+"""
+Test runner using cocotb_test - no Makefiles needed per unit.
+Run with: `pytest test.py` or `uv run pytest test.py`
+"""
 
-import cocotb
-from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+import pytest
+from pathlib import Path
+from cocotb_test import simulator
+
+TEST_DIR = Path(__file__).parent.resolve()
+SRC_DIR = f"{TEST_DIR.parent}/src"
 
 
-@cocotb.test()
-async def test_project(dut):
-    dut._log.info("Start")
+def test_registers():
+    simulator.run(
+        verilog_sources=[
+            f"{SRC_DIR}/cpu/registers.v",
+            f"{TEST_DIR}/unit/registers/tb_registers.v",
+        ],
+        toplevel="tb_registers",
+        module="unit.registers.tb_registers",
+        simulator="icarus",
+        work_dir=f"{TEST_DIR}/sim_build/registers",
+        python_search=[str(TEST_DIR)],
+    )
 
-    # Set the clock period to 10 us (100 KHz)
-    clock = Clock(dut.clk, 10, unit="us")
-    cocotb.start_soon(clock.start())
 
-    """
-    # Reset
-    dut._log.info("Reset")
-    dut.ena.value = 1
-    dut.ui_in.value = 0
-    dut.uio_in.value = 0
-    dut.rst_n.value = 0
-    await ClockCycles(dut.clk, 10)
-    dut.rst_n.value = 1
+def test_main_design():
+    simulator.run(
+        verilog_sources=[
+            f"{SRC_DIR}/tinymoa.v",
+            f"{TEST_DIR}/integration/tb_placeholder.v",
+        ],
+        toplevel="testbench",
+        module="integration.tb_placeholder",
+        simulator="icarus",
+        work_dir=f"{TEST_DIR}/sim_build/main",
+        python_search=[str(TEST_DIR)],
+    )
 
-    dut._log.info("Test project behavior")
 
-    # Set the input values you want to test
-    dut.ui_in.value = 20
-    dut.uio_in.value = 30
-
-    # Wait for one clock cycle to see the output values
-    await ClockCycles(dut.clk, 1)
-
-    # The following assersion is just an example of how to check the output values.
-    # Change it to match the actual expected output of your module:
-    assert dut.uo_out.value == 50
-
-    # Keep testing the module by changing the input values, waiting for
-    # one or more clock cycles, and asserting the expected output values.
-    """
-
-    dut._log.info("Test LED counter")
-
-    # Wait for a few clock cycles and check that the counter is incrementing
-    await ClockCycles(dut.clk, 100)
-
-    # The LED output should change as the counter increments
-    # The counter is 26 bits, and led = counter[25:18]
-    # After 100 cycles, the counter should be 100 (0x64)
-    # led would be counter[25:18] = 0 (since counter is still small)
-
-    dut._log.info(f"LED value after 100 cycles: {dut.led.value}")
-
-    # Let it run longer to see changes
-    await ClockCycles(dut.clk, 300000)
-    dut._log.info(f"LED value after more cycles: {dut.led.value}")
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])
