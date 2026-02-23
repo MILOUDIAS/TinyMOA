@@ -41,19 +41,18 @@ async def test_project(dut):
     # one or more clock cycles, and asserting the expected output values.
     """
 
-
     dut._log.info("Test LED counter")
 
     # Wait for a few clock cycles and check that the counter is incrementing
     await ClockCycles(dut.clk, 100)
-    
+
     # The LED output should change as the counter increments
     # The counter is 26 bits, and led = counter[25:18]
     # After 100 cycles, the counter should be 100 (0x64)
     # led would be counter[25:18] = 0 (since counter is still small)
-    
+
     dut._log.info(f"LED value after 100 cycles: {dut.led.value}")
-    
+
     # Let it run longer to see changes
     await ClockCycles(dut.clk, 300000)
     dut._log.info(f"LED value after more cycles: {dut.led.value}")
