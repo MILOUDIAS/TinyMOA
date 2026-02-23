@@ -14,6 +14,7 @@ async def test_project(dut):
     clock = Clock(dut.clk, 10, unit="us")
     cocotb.start_soon(clock.start())
 
+    """
     # Reset
     dut._log.info("Reset")
     dut.ena.value = 1
@@ -29,14 +30,30 @@ async def test_project(dut):
     dut.ui_in.value = 20
     dut.uio_in.value = 30
 
-    # Just pass the tests until everything is setup...
-
     # Wait for one clock cycle to see the output values
-    # await ClockCycles(dut.clk, 1)
+    await ClockCycles(dut.clk, 1)
 
     # The following assersion is just an example of how to check the output values.
     # Change it to match the actual expected output of your module:
-    # assert dut.uo_out.value == 50
+    assert dut.uo_out.value == 50
 
     # Keep testing the module by changing the input values, waiting for
     # one or more clock cycles, and asserting the expected output values.
+    """
+
+
+    dut._log.info("Test LED counter")
+
+    # Wait for a few clock cycles and check that the counter is incrementing
+    await ClockCycles(dut.clk, 100)
+    
+    # The LED output should change as the counter increments
+    # The counter is 26 bits, and led = counter[25:18]
+    # After 100 cycles, the counter should be 100 (0x64)
+    # led would be counter[25:18] = 0 (since counter is still small)
+    
+    dut._log.info(f"LED value after 100 cycles: {dut.led.value}")
+    
+    # Let it run longer to see changes
+    await ClockCycles(dut.clk, 300000)
+    dut._log.info(f"LED value after more cycles: {dut.led.value}")

@@ -1,9 +1,8 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
-/* This testbench just instantiates the module and makes some convenient wires
-   that can be driven / tested by the cocotb test.py.
-*/
+// This testbench just instantiates the module and makes some convenient wires
+// that can be driven / tested by the cocotb test.py.
 module testbench ();
 
   // Dump the signals to a FST file. You can view it with gtkwave or surfer.
@@ -13,8 +12,10 @@ module testbench ();
     #1;
   end
 
-  // Wire up the inputs and outputs:
   reg clk;
+  wire [7:0] led;
+
+  /* TT pins
   reg rst_n;
   reg ena;
   reg [7:0] ui_in;
@@ -22,8 +23,13 @@ module testbench ();
   wire [7:0] uo_out;
   wire [7:0] uio_out;
   wire [7:0] uio_oe;
+  */
 
-  tt_um_tinymoa_ihp26a tinymoa (
+  tinymoa_top tinymoa_tb (
+      .clk (clk),
+      .led (led)
+      
+      /* TT pins
       .ui_in  (ui_in),    // Dedicated inputs
       .uo_out (uo_out),   // Dedicated outputs
       .uio_in (uio_in),   // IOs: Input path
@@ -32,6 +38,6 @@ module testbench ();
       .ena    (ena),      // enable - goes high when design is selected
       .clk    (clk),      // clock
       .rst_n  (rst_n)     // not reset
+      */
   );
-
 endmodule

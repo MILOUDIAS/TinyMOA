@@ -1,6 +1,5 @@
 // Testing Alchitry Cu (iCE40-HX8K) compilation using the IIC-OSIC toolchain
-
-module tinymoa (
+module tinymoa_top (
     input  clk,
     output reg [7:0] led
 );
