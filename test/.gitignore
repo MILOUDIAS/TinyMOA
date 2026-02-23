@@ -3,6 +3,7 @@ results.xml
 
 # Waveform files
 *.fst
+*.fst.hier
 *.vcd
 *.ghw
 
