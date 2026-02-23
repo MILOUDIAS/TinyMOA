@@ -64,7 +64,9 @@ async def test_counter_overflow(dut_counter):
 async def test_counter_conditional_increment(dut_counter):
     """Test counter only increments when increment signal is high."""
     await setup_counter(dut_counter, is_increment=False)
-    await ClockCycles(dut_counter.clk, 8) # Already incremented by one in setup, doesn't matter though.
+    await ClockCycles(
+        dut_counter.clk, 8
+    )  # Already incremented by one in setup, doesn't matter though.
 
     retired = 0
     last_retired = 0
