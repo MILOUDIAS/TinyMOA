@@ -4,7 +4,7 @@
     32-bit ALU instructions (opcode in bits [6:2])
     Part of the RV32E base instruction set.
     E stands for "embedded", meaning we only use registers x0-x15 instead of x0-x31
-    The RV32E base ISA is compatible with all extensions as of Jan. 2026
+    The RV32E base ISA is compatible with all extensions as of Feb. 2026
     https://ww1.microchip.com/downloads/aemDocuments/documents/FPGA/ProductDocuments/UserGuides/ip_cores/directcores/riscvspec.pdf
 
     opcode[6:2]
@@ -391,14 +391,14 @@ module tinymoa_decoder #(parameter REG_ADDR_WIDTH = 4) (
                             read_addr_a = instr[10:7];
                             write_dest = {3'b000, instr[12]};
                         end
-                    end else begin  // MV / ADD
+                    end else begin  // C.MV and C.ADD
                         is_alu_reg = 1;
                         read_addr_a = instr[12] ? instr[10:7] : 4'd0;
                         read_addr_b = instr[5:2];
                         write_dest  = instr[10:7];
                     end
                 end
-                5'b10101: begin // MUL16
+                5'b10101: begin // C.MUL16
                     is_alu_reg = 1;
                     alu_opcode = 4'b1010;
                     read_addr_a = instr[10:7];

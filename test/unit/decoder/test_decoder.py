@@ -2,9 +2,13 @@
 
 Tests each instruction type individually without external dependencies.
 Only ADD and AND are fully implemented; others are placeholders.
+
+RISC-V ISA reference:
+https://ww1.microchip.com/downloads/aemDocuments/documents/FPGA/ProductDocuments/UserGuides/ip_cores/directcores/riscvspec.pdf
 """
 
-from . import encoders as en
+from . import rv32i_encode as rv32i
+from . import rv32c_encode as rv32c
 
 import cocotb
 from cocotb.clock import Clock
@@ -12,7 +16,7 @@ from cocotb.triggers import ClockCycles
 from numpy import random
 
 # ============================================================================
-# INDIVIDUAL INSTRUCTION TESTS - R-Type ALU Register Operations
+# R-Type ALU Register Operations
 # ============================================================================
 
 
@@ -37,7 +41,7 @@ async def test_add(dut):
         rs1 = random.randint(0, 15)
         rs2 = random.randint(0, 15)
 
-        dut.instr.value = en.encode_add(rd, rs1, rs2)
+        dut.instr.value = rv32i.encode_add(rd, rs1, rs2)
         await ClockCycles(dut.clk, 1)
 
         # Operation and port values
@@ -75,7 +79,7 @@ async def test_and(dut):
         rs1 = random.randint(0, 15)
         rs2 = random.randint(0, 15)
 
-        dut.instr.value = en.encode_and(rd, rs1, rs2)
+        dut.instr.value = rv32i.encode_and(rd, rs1, rs2)
         await ClockCycles(dut.clk, 1)
 
         # Operation and port values
