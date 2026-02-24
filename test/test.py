@@ -39,6 +39,20 @@ def test_multiplier():
     )
 
 
+def test_decoder():
+    simulator.run(
+        verilog_sources=[
+            f"{SRC_DIR}/cpu/decoder.v",
+            f"{TEST_DIR}/unit/decoder/tb_decoder.v",
+        ],
+        toplevel="tb_decoder",
+        module="unit.decoder.test_decoder",
+        simulator="icarus",
+        work_dir=f"{TEST_DIR}/sim_build/decoder",
+        python_search=[str(TEST_DIR)],
+    )
+
+
 def test_registers():
     simulator.run(
         verilog_sources=[
