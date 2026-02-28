@@ -1,107 +1,71 @@
+#  TinyMOA
 
-# TinyMOA
+A minimal RISC-V CPU with a Compute-in-Memory (CIM) accelerator for performing efficient neural network inference using analog matrix multiplications - all built on top of [TinyQV](https://github.com/MichaelBell/tinyQV) by Michael Bell.
 
-## Overview
+TinyMOA is not meant to be a fully general-purpose core and many design decisions are optimized toward the CIM use case: minimal die area, high code density, and tight coupling to the
+crossbar interface.
 
-TinyMOA is a custom RISC-V processor based on [TinyQV](https://github.com/MichaelBell/tinyQV/tree/main) designed for Compute-in-Memory (CIM) operations using emulated CMOS memristor crossbar arrays. It extends the minimal `RV32EC` instruction set with a 16x16 multiply instruction and custom CIM instructions for efficient neural network inference.
-- The base ISA is `RV32EC`: 32b RISC-V Embedded (16 registers instead of 32) + Compressed (16b instruction extension).
-- Custom 16x16 multiply instruction (C.MUL16)
-- Custom CIM instructions to manage the memristor crossbar array
-- Simple blocking/stallinng architecture
+## Purpose
 
-Index
-- [Compute-in-Memory](./CIM.md)
-- [Instruction Types](#instruction-types)
-- [RV32E Registers](#rv32e-registers)
-- [Compressed Register Subset](#compressed-register-subset)
-- [Instruction Set Summary](#instruction-set-summary)
-- [Standard 32b Instructions](#32-bit-instruction-formats)
-- [Compressed 16b Instructions](#16b-quadrants-0-2-custom)
+Modern GPUs spend most of their power budget *moving data*, not computing. While performant at small scale for graphics rendering, it is increasingly inefficient as model sizes grow for AI/ML or LLM use-cases.
 
-## Compute-in-Memory
+Compute-in-Memory (CIM) eliminates this bottleneck by processing data where it is stored, removing the data bus entirely. Similar to your brain, it doesn't separate memory from thought, both are processed in the same place.
 
-[See here for an overview](./CIM.md)
+CIM often uses resistive RAM (RRAM) which uses memristors to store continuous (analog) values in the form of conductance like a variable resistor. After loading memory initially, you can use Ohm's law to perform a single matrix-vector multiplication (MVM) near instantaneously.
 
-## Instruction Types
+The issue with RRAM is that it requires exotic materials and non-standard fabrication processes that lock it behind expensive, specialized fabs that are out of reach for most researchers.
 
-TinyMOA supports both 32-bit and 16-bit (compressed) instructions. The instruction type determines how the  bits are organized
+### Research Question
 
-### 32-bit Instruction Formats
+Using open-source PDKs, tooling, and fabrication processes, can emulated CMOS 3T1C memristor cells obtain 30-40x the efficiency (GOPS/W) over NVIDIA's H100/H200-class hardware?
 
-Base RV32I instruction forms (unaffected by 16 vs 32 register count with RV32E)
+If so, this approach could significantly democratize CIM research for students and institutions without access to exotic fabrication processes.
 
-| Type | Format | Use Case | Examples |
-|------|--------|----------|----------|
-| **R** | `[funct7][rs2][rs1][funct3][rd][opcode]` | Two source registers, one destination | ADD, SUB, AND, OR, XOR, SLL, SRL, SRA, ... |
-| **I** | `[imm[11:0]][rs1][funct3][rd][opcode]` | One source register, one immediate value, loads | ADDI, ANDI, LW, LH, LB, JALR, ... |
-| **S** | `[imm[11:5]][rs2][rs1][funct3][imm[4:0]][opcode]` | Store to memory using split immediate field | SW, SH, SB, ... |
-| **B** | `[imm[12\|10:5]][rs2][rs1][funct3][imm[4:1\|11]][opcode]` | Conditional branches and offsets | BEQ, BNE, BLT, BGE, BLTU, BGEU, ... |
-| **U** | `[imm[31:12]][rd][opcode]` | Load large upper immediate (20 bits) | LUI, AUIPC, ... |
-| **J** | `[imm[20\|10:1\|11\|19:12]][rd][opcode]` | Unconditional jumps | J, JAL, ... |
 
-### 16-bit Compressed Formats
+<!-- TODO: block diagram — CPU -> CIM array -> crossbar -->
 
-Compressed instructions use different formats to fit operations into 16 bits:
+<!-- TODO: GOPS/W comparison bar chart vs H100/H200 -->
 
-| Type | Format | Use Case | Examples |
-|------|--------|----------|----------|
-| **CR** | `[funct4][rd/rs1][rs2][op]` | Register operations | C.ADD, C.MV, C.JR, ... |
-| **CI** | `[funct3][imm][rd/rs1][imm][op]` | Immediate ops | C.ADDI, C.LI, C.LWSP, ... |
-| **CSS** | `[funct3][imm][rs2][op]` | Stack-relative store | C.SWSP, ... |
-| **CIW** | `[funct3][imm][rd'][op]` | Wide immediate | C.ADDI4SPN, ... |
-| **CL** | `[funct3][imm][rs1'][imm][rd'][op]` | Load from memory | C.LW, ... |
-| **CS** | `[funct3][imm][rs1'][imm][rs2'][op]` | Store to memory | C.SW, ... |
-| **CB** | `[funct3][offset][rs1'][offset][op]` | Conditional branch | C.BEQZ, C.BNEZ, ... |
-| **CJ** | `[funct3][jump target][op]` | Unconditional jump | C.J, C.JAL, ... |
+## Architecture
 
-> NOTE: `rd'`, `rs1'`, `rs2'` denote compressed registers (x8-x15 only)
+### CPU Core
 
-## RV32E Registers
+The RISC-V core is directly based on [TinyQV](https://github.com/MichaelBell/tinyQV) by [Michael Bell](https://github.com/MichaelBell). TinyQV is a RV32EC SoC designed for [Tiny Tapeout](https://tinytapeout.com/), built to fit a working RISC-V core in the smallest possible silicon area. The serial 4-bit bus architecture, register file design, and pipeline structure are all his work. *TinyMOA would not exist without any of it*.
 
-Since TinyMOA uses RV32E with 16 registers (`x0-x15`) instead of 32, register usage follows standard but adjusted RISC-V calling conventions. Note that `$gp` and `$sp` are pseudo-hardcoded such that since they are read over 8 cycles, they *generate* the fixed value instead of storing it as a constant. This saves us roughly 32 FFs in place of some combination logic + 3 comparators (2 for `$gp`, 1 for `$tp`).
+The original additions in TinyMOA are test-suite alterations, incrementally restructured instruction decoder, the MOA custom instruction extensions, the CIM hardware interface, and the memristor crossbar array.
 
-| Register | ABI Name | Usage | Saved by |
-|----------|----------|-------|----------|
-| `x0` | zero | Hardwired to 0 (reads always return 0, writes ignored) | - |
-| `x1` | ra | Return address (link register) | Caller |
-| `x2` | sp | Stack pointer | Callee |
-| `x3` | gp | Global pointer (pseudo-hardcoded to `0x1000400`) | - |
-| `x4` | tp | Thread pointer (pseudo-hardcoded to `0x800000`) | - |
-| `x5-7` | t0-t2 | Temporary registers | Caller |
-| `x8` | s0/fp | Saved register / Frame pointer | Callee |
-| `x9` | s1 | Saved register | Callee |
-| `x10-x11` | a0-a1 | Function arguments / return values | Caller |
-| `x12-x15` | a2-a5 | Function arguments | Caller |
+### Why RV32EC?
 
-> Caller-saved: Function can freely modify these (caller must save if needed)  
-> Callee-saved: Function must preserve these (callee must save/restore)
+| Choice | Reason |
+|--------|--------|
+| RV32 | 32-bit RISC-V is the smallest ISA with mature C compiler support (GCC, LLVM) |
+| E (Embedded) | Cuts the register file from 32 to 16 registers, saving die/routing space |
+| C (Compressed) | 16-bit instructions for common operations. Doubles code density and halves execution time |
 
-### Compressed Register Subset
+## Extensions Over Base RV32EC
 
-Compressed instructions encode registers in 3 bits instead of 4 or 5, limiting them to `x8-x15`. They are written with an apostrophe such as `rd'`, `rs1'`, `rs2'`. Below is the compressed register table:
+| Extension | Description |
+|-----------|-------------|
+| MOA.V | 8 custom 32-bit instructions to load, configure, and fire the CIM array |
+| C.MUL16 | 16x16 -> 32-bit multiply in a single compressed instruction |
+| C.LWTP, C.SWTP | Fast load/store through the thread pointer peripheral window |
+| C.SCXT, C.LCXT | Single-instruction save/restore of all compressed registers (x8-15) |
+| Zcb | Byte-wise common operations |
+| Zicsr | CSR read/write for hardware configuration |
+| Zicond | Conditional zeroing without branches |
 
-| 3-bit encoding | Register | ABI Name | Calculation |
-|----------------|----------|----------|-------------|
-| `000` | `x8` | s0/fp | `8 + 0 = x8` |
-| `001` | `x9` | s1 | `8 + 1 = x9` |
-| `010` | `x10` | a0 | `8 + 2 = x10` |
-| `011` | `x11` | a1 | `8 + 3 = x11` |
-| `100` | `x12` | a2 | `8 + 4 = x12` |
-| `101` | `x13` | a3 | `8 + 5 = x13` |
-| `110` | `x14` | a4 | `8 + 6 = x14` |
-| `111` | `x15` | a5 | `8 + 7 = x15` |
+### Why a 4-bit Serial Bus?
 
-These are the most frequently used registers in leaf functions (arguments, saved registers, temporaries). The 3-bit value is added to 8 to get the actual register number.
+Instead of 32-bit parallel internal buses, registers are read and written *4 bits per clock cycle*, completing a full 32-bit operation every 8 cycles. However, compressed 16-bit instructions take 4 cycles to complete except for `C.MUL16` which produces a 32-bit value from 16-bit inputs.
 
-## Instruction Set Summary
-What isn't included (what is replaced)
+This tradeoff sacrifices latency for a dramatic reduction in routing width and flip-flop count which allows any of this to fit in a small area such as TinyTapeout.
 
-### 32b
-Standard RV32I
+## Documentation
 
-### 16b quadrants 0-2 (custom)
-Custom CIM instructions
+- [ISA Reference](./docs/ISA.md) — instruction encoding, custom extensions, full opcode map
+- [CIM Architecture](./docs/CIM.md) — crossbar hardware, control signals, weight loading, inference pseudocode
+- [Doc Index & Quick Reference](./docs/README.md) — register table, format cheatsheet, what's in/out
 
-Zicond instructions
+## Status
 
-C.MUL16
+Work in progress.
