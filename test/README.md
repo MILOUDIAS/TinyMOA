@@ -13,9 +13,10 @@ test/
 ├── integration/     # Full system-wide CPU tests (WIP)
 ├── unit/
 │   ├── alu/         # ALU ops (add, sub, slt, sll)
-│   ├── counter/     # Program counter (register)
+│   ├── counter/     # Program counter (a type of register)
 │   ├── decoder/     # RV32I, RV32C, and custom instruction decoding
 │   └── registers/   # Register file write and dual-port reading
+└── test.py
 ```
 
 ## Running Tests
