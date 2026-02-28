@@ -226,17 +226,19 @@ def encode_c_jal(imm):
     """
     Compressed Jump and Link (CJ-Type, RV32 only)
     C.JAL offset
+    Decoder: c_j_imm = {{21{instr[12]}}, instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 1'b0}
+    So: bit[12]=offset[11], bit[11]=offset[4], bit[10:9]=offset[9:8], bit[8]=offset[10],
+        bit[7]=offset[6], bit[6]=offset[7], bit[5:3]=offset[3:1], bit[2]=offset[5]
     """
-    # offset[11|4|9:8|10|6|7|3:1|5] to [12:2]
     scrambled = (
-        ((imm & 0x800) << 1)
-        | ((imm & 0x010) << 7)
-        | ((imm & 0x300) << 1)
-        | ((imm & 0x400) >> 2)
-        | ((imm & 0x040) << 1)
-        | ((imm & 0x080) >> 1)
-        | ((imm & 0x00E) << 2)
-        | ((imm & 0x020) >> 3)
+        ((imm >> 11) & 1) << 10 |  # offset[11] -> bit[12]
+        ((imm >> 4) & 1) << 9 |    # offset[4] -> bit[11]
+        ((imm >> 8) & 3) << 7 |    # offset[9:8] -> bits[10:9]
+        ((imm >> 10) & 1) << 6 |   # offset[10] -> bit[8]
+        ((imm >> 6) & 1) << 5 |    # offset[6] -> bit[7]
+        ((imm >> 7) & 1) << 4 |    # offset[7] -> bit[6]
+        ((imm >> 1) & 7) << 1 |    # offset[3:1] -> bits[5:3]
+        ((imm >> 5) & 1)           # offset[5] -> bit[2]
     )
     return encode_cj_type(0b001, scrambled, 0b01)
 
@@ -255,14 +257,15 @@ def encode_c_addi16sp(imm):
     """
     Compressed Add Immediate to Stack Pointer scaled by 16 (CI-Type)
     C.ADDI16SP imm
+    Decoder: c_addi16sp_imm = {{23{instr[12]}}, instr[4:3], instr[5], instr[2], instr[6], 4'b0}
+    So: bit[12]=imm[9], bits[4:3]=imm[8:7], bit[5]=imm[6], bit[2]=imm[5], bit[6]=imm[4]
     """
-    # imm[9] to [12], imm[4|6|8:7|5] to [6:2]
     imm_hi = (imm >> 9) & 0x1
     imm_lo = (
-        ((imm >> 2) & 0x10)
-        | ((imm >> 1) & 0x8)
-        | ((imm >> 1) & 0x6)
-        | ((imm >> 3) & 0x1)
+        ((imm >> 4) & 0x1) << 4 |  # imm[4] -> imm_lo[4] -> instr[6]
+        ((imm >> 6) & 0x1) << 3 |  # imm[6] -> imm_lo[3] -> instr[5]
+        ((imm >> 7) & 0x3) << 1 |  # imm[8:7] -> imm_lo[2:1] -> instr[4:3]
+        ((imm >> 5) & 0x1)         # imm[5] -> imm_lo[0] -> instr[2]
     )
     return encode_ci_type(0b011, imm_hi, 2, imm_lo, 0b01)  # rd=2 is sp
 
@@ -292,24 +295,24 @@ def encode_c_srai(rd, shamt):
     """
     Compressed Shift Right Arithmetic Immediate (CB-Type)
     C.SRAI rd', shamt
+    bits[12:10] = {shamt[5], funct2[1:0]} where funct2=01 for SRAI
+    bits[6:2] = shamt[4:0]
     """
-    offset_hi = (shamt >> 5) & 0x1
+    offset_hi = ((shamt >> 5) & 0x1) << 2 | 0b01  # {shamt[5], 0, 1}
     offset_lo = shamt & 0x1F
-    # Needs funct2=01 in offset_lo[4:3]
-    offset_lo_with_funct = offset_lo | 0x10
-    return encode_cb_type(0b100, offset_hi, rd & 0x7, offset_lo_with_funct, 0b01)
+    return encode_cb_type(0b100, offset_hi, rd & 0x7, offset_lo, 0b01)
 
 
 def encode_c_andi(rd, imm):
     """
     Compressed AND Immediate (CB-Type)
     C.ANDI rd', imm
+    bits[12:10] = {imm[5], funct2[1:0]} where funct2=10 for ANDI
+    bits[6:2] = imm[4:0]
     """
-    offset_hi = (imm >> 5) & 0x1
+    offset_hi = ((imm >> 5) & 0x1) << 2 | 0b10  # {imm[5], 1, 0}
     offset_lo = imm & 0x1F
-    # Needs funct2=10 in offset_lo[4:3]
-    offset_lo_with_funct = offset_lo | 0x10
-    return encode_cb_type(0b100, offset_hi, rd & 0x7, offset_lo_with_funct, 0b01)
+    return encode_cb_type(0b100, offset_hi, rd & 0x7, offset_lo, 0b01)
 
 
 def encode_c_sub(rd, rs2):
@@ -348,19 +351,18 @@ def encode_c_j(imm):
     """
     Compressed Jump (CJ-Type)
     C.J offset
+    Decoder: c_j_imm = {{21{instr[12]}}, instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 1'b0}
+    Same scrambling as C.JAL
     """
-
-    # Impressive but absurd.
-    # offset[11|4|9:8|10|6|7|3:1|5] to [12:2]
     scrambled = (
-        ((imm & 0x800) << 1)
-        | ((imm & 0x010) << 7)
-        | ((imm & 0x300) << 1)
-        | ((imm & 0x400) >> 2)
-        | ((imm & 0x040) << 1)
-        | ((imm & 0x080) >> 1)
-        | ((imm & 0x00E) << 2)
-        | ((imm & 0x020) >> 3)
+        ((imm >> 11) & 1) << 10 |  # offset[11] -> bit[12]
+        ((imm >> 4) & 1) << 9 |    # offset[4] -> bit[11]
+        ((imm >> 8) & 3) << 7 |    # offset[9:8] -> bits[10:9]
+        ((imm >> 10) & 1) << 6 |   # offset[10] -> bit[8]
+        ((imm >> 6) & 1) << 5 |    # offset[6] -> bit[7]
+        ((imm >> 7) & 1) << 4 |    # offset[7] -> bit[6]
+        ((imm >> 1) & 7) << 1 |    # offset[3:1] -> bits[5:3]
+        ((imm >> 5) & 1)           # offset[5] -> bit[2]
     )
     return encode_cj_type(0b101, scrambled, 0b01)
 
@@ -369,10 +371,26 @@ def encode_c_beqz(rs1, imm):
     """
     Compressed Branch if Equal to Zero (CB-Type)
     C.BEQZ rs1', offset
+    Decoder: c_b_imm = {{24{instr[12]}}, instr[6:5], instr[2], instr[11:10], instr[4:3], 1'b0}
+    So: bit[12]=offset[8], bits[6:5]=offset[7:6], bit[2]=offset[5], bits[11:10]=offset[4:3], bits[4:3]=offset[2:1]
     """
-    # offset[8|4:3] to [12:10], offset[7:6|2:1|5] to [6:2]
-    offset_hi = ((imm >> 6) & 0x4) | ((imm >> 3) & 0x3)
-    offset_lo = ((imm >> 1) & 0x18) | ((imm << 2) & 0x6) | ((imm >> 3) & 0x1)
+    offset_hi = (
+        ((imm >> 8) & 0x1) << 2 |  # offset[8] -> offset_hi[2] -> bit[12]
+        ((imm >> 3) & 0x3)         # offset[4:3] -> offset_hi[1:0] -> bits[11:10]
+    )
+    offset_lo = (
+        ((imm >> 6) & 0x3) << 3 |  # offset[7:6] -> offset_lo[4:3] -> bits[6:5]
+        ((imm >> 5) & 0x1) << 2 |  # offset[5] -> offset_lo[2] -> bit[4]
+        ((imm >> 1) & 0x3)         # offset[2:1] -> offset_lo[1:0] -> bits[3:2] (wait, bit[2] in CB is offset 5...)
+    )
+    # Actually, let me recalculate: CB-Type places offset_lo at bits[6:2]
+    # Decoder: bits[6:5]=offset[7:6], bit[2]=offset[5], bits[4:3]=offset[2:1]
+    # So: offset_lo[4:3] -> bits[6:5], offset_lo[0] -> bit[2], offset_lo[2:1] -> bits[4:3]
+    offset_lo = (
+        ((imm >> 6) & 0x3) << 3 |  # offset[7:6] -> offset_lo[4:3]
+        ((imm >> 1) & 0x3) << 1 |  # offset[2:1] -> offset_lo[2:1]
+        ((imm >> 5) & 0x1)         # offset[5] -> offset_lo[0]
+    )
     return encode_cb_type(0b110, offset_hi, rs1 & 0x7, offset_lo, 0b01)
 
 
@@ -380,10 +398,18 @@ def encode_c_bnez(rs1, imm):
     """
     Compressed Branch if Not Equal to Zero (CB-Type)
     C.BNEZ rs1', offset
+    Decoder: c_b_imm = {{24{instr[12]}}, instr[6:5], instr[2], instr[11:10], instr[4:3], 1'b0}
+    Same scrambling as C.BEQZ
     """
-    # offset[8|4:3] to [12:10], offset[7:6|2:1|5] to [6:2]
-    offset_hi = ((imm >> 6) & 0x4) | ((imm >> 3) & 0x3)
-    offset_lo = ((imm >> 1) & 0x18) | ((imm << 2) & 0x6) | ((imm >> 3) & 0x1)
+    offset_hi = (
+        ((imm >> 8) & 0x1) << 2 |  # offset[8] -> offset_hi[2] -> bit[12]
+        ((imm >> 3) & 0x3)         # offset[4:3] -> offset_hi[1:0] -> bits[11:10]
+    )
+    offset_lo = (
+        ((imm >> 6) & 0x3) << 3 |  # offset[7:6] -> offset_lo[4:3]
+        ((imm >> 1) & 0x3) << 1 |  # offset[2:1] -> offset_lo[2:1]
+        ((imm >> 5) & 0x1)         # offset[5] -> offset_lo[0]
+    )
     return encode_cb_type(0b111, offset_hi, rs1 & 0x7, offset_lo, 0b01)
 
 

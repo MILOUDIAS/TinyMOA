@@ -516,3 +516,300 @@ async def test_c_addi(dut):
             f"imm mismatch: expected {imm}, got {dut.imm.value.to_signed()}"
         )
         _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_nop(dut):
+    """C.NOP - No operation (CI format)"""
+    await setup_decoder(dut)
+
+    dut.instr.value = rv32c.encode_c_nop()
+    await ClockCycles(dut.clk, 1)
+
+    assert dut.alu_opcode.value == 0b0000, "C.NOP uses ADDI opcode"
+    assert dut.rd.value == 0, "C.NOP writes to x0"
+    assert dut.rs1.value == 0, "C.NOP uses x0 as rs1"
+    assert dut.imm.value.to_unsigned() == 0, "C.NOP has zero immediate"
+    _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_jal(dut):
+    """C.JAL offset - Jump and link (CJ format, RV32 only)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        offset = random.randint(-2048, 2047) << 1
+        dut.instr.value = rv32c.encode_c_jal(offset)
+        await ClockCycles(dut.clk, 1)
+
+        assert dut.rd.value == 1, "C.JAL sets rd=x1 (ra)"
+        assert dut.imm.value.to_signed() == offset, (
+            f"offset mismatch: expected {offset}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_jal=1)
+
+
+@cocotb.test()
+async def test_c_addi16sp(dut):
+    """C.ADDI16SP imm - Add immediate to SP scaled by 16 (CI format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        imm = random.randint(-512, 496) & ~15
+        if imm == 0:
+            imm = 16
+        dut.instr.value = rv32c.encode_c_addi16sp(imm)
+        await ClockCycles(dut.clk, 1)
+
+        assert dut.alu_opcode.value == 0b0000, "C.ADDI16SP uses ADDI opcode"
+        assert dut.rd.value == 2, "C.ADDI16SP sets rd=x2 (sp)"
+        assert dut.rs1.value == 2, "C.ADDI16SP uses x2 (sp) as rs1"
+        assert dut.imm.value.to_signed() == imm, (
+            f"imm mismatch: expected {imm}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_lui(dut):
+    """C.LUI rd, imm - Load upper immediate (CI format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(3, 15)  # Skip x0, x1, x2
+        imm = random.randint(-32, 31) << 12
+        if imm == 0:
+            imm = 0x1000
+        dut.instr.value = rv32c.encode_c_lui(rd, imm)
+        await ClockCycles(dut.clk, 1)
+
+        assert dut.rd.value == rd, f"rd mismatch: expected x{rd}, got x{dut.rd.value}"
+        assert dut.imm.value.to_signed() == imm, (
+            f"imm mismatch: expected {imm}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_lui=1)
+
+
+@cocotb.test()
+async def test_c_srli(dut):
+    """C.SRLI rd', shamt - Shift right logical immediate (CB format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        shamt = random.randint(1, 31)
+        dut.instr.value = rv32c.encode_c_srli(rd, shamt)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+
+        assert dut.alu_opcode.value == 0b0101, "C.SRLI uses SRL opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.imm.value.to_unsigned() == shamt, (
+            f"shamt mismatch: expected {shamt}, got {dut.imm.value.to_unsigned()}"
+        )
+        _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_srai(dut):
+    """C.SRAI rd', shamt - Shift right arithmetic immediate (CB format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        shamt = random.randint(1, 31)
+        dut.instr.value = rv32c.encode_c_srai(rd, shamt)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+
+        assert dut.alu_opcode.value == 0b1101, "C.SRAI uses SRA opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.imm.value.to_unsigned() == shamt, (
+            f"shamt mismatch: expected {shamt}, got {dut.imm.value.to_unsigned()}"
+        )
+        _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_andi(dut):
+    """C.ANDI rd', imm - AND immediate (CB format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        imm = random.randint(-32, 31)
+        dut.instr.value = rv32c.encode_c_andi(rd, imm)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+
+        assert dut.alu_opcode.value == 0b0111, "C.ANDI uses ANDI opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.imm.value.to_signed() == imm, (
+            f"imm mismatch: expected {imm}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_alu_imm=1)
+
+
+@cocotb.test()
+async def test_c_sub(dut):
+    """C.SUB rd', rs2' - Subtract (CA format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        rs2 = random.randint(0, 7)
+        dut.instr.value = rv32c.encode_c_sub(rd, rs2)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+        expected_rs2 = 8 + rs2
+
+        assert dut.alu_opcode.value == 0b1000, "C.SUB uses SUB opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.rs2.value == expected_rs2, (
+            f"rs2 mismatch: expected x{expected_rs2}, got x{dut.rs2.value}"
+        )
+        _verify_control_flags(dut, is_alu_reg=1)
+
+
+@cocotb.test()
+async def test_c_xor(dut):
+    """C.XOR rd', rs2' - Bitwise XOR (CA format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        rs2 = random.randint(0, 7)
+        dut.instr.value = rv32c.encode_c_xor(rd, rs2)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+        expected_rs2 = 8 + rs2
+
+        assert dut.alu_opcode.value == 0b0100, "C.XOR uses XOR opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.rs2.value == expected_rs2, (
+            f"rs2 mismatch: expected x{expected_rs2}, got x{dut.rs2.value}"
+        )
+        _verify_control_flags(dut, is_alu_reg=1)
+
+
+@cocotb.test()
+async def test_c_or(dut):
+    """C.OR rd', rs2' - Bitwise OR (CA format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rd = random.randint(0, 7)
+        rs2 = random.randint(0, 7)
+        dut.instr.value = rv32c.encode_c_or(rd, rs2)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rd = 8 + rd
+        expected_rs2 = 8 + rs2
+
+        assert dut.alu_opcode.value == 0b0110, "C.OR uses OR opcode"
+        assert dut.rd.value == expected_rd, (
+            f"rd mismatch: expected x{expected_rd}, got x{dut.rd.value}"
+        )
+        assert dut.rs1.value == expected_rd, (
+            f"rs1 mismatch: expected x{expected_rd}, got x{dut.rs1.value}"
+        )
+        assert dut.rs2.value == expected_rs2, (
+            f"rs2 mismatch: expected x{expected_rs2}, got x{dut.rs2.value}"
+        )
+        _verify_control_flags(dut, is_alu_reg=1)
+
+
+@cocotb.test()
+async def test_c_j(dut):
+    """C.J offset - Unconditional jump (CJ format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        offset = random.randint(-2048, 2047) << 1
+        dut.instr.value = rv32c.encode_c_j(offset)
+        await ClockCycles(dut.clk, 1)
+
+        assert dut.rd.value == 0, "C.J sets rd=x0 (no link)"
+        assert dut.imm.value.to_signed() == offset, (
+            f"offset mismatch: expected {offset}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_jal=1)
+
+
+@cocotb.test()
+async def test_c_beqz(dut):
+    """C.BEQZ rs1', offset - Branch if equal to zero (CB format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rs1 = random.randint(0, 7)
+        offset = random.randint(-256, 255) << 1
+        dut.instr.value = rv32c.encode_c_beqz(rs1, offset)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rs1 = 8 + rs1
+
+        assert dut.mem_opcode.value == 0b000, "C.BEQZ uses BEQ (mem_opcode=000)"
+        assert dut.rs1.value == expected_rs1, (
+            f"rs1 mismatch: expected x{expected_rs1}, got x{dut.rs1.value}"
+        )
+        assert dut.rs2.value == 0, "C.BEQZ compares against x0"
+        assert dut.imm.value.to_signed() == offset, (
+            f"offset mismatch: expected {offset}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_branch=1)
+
+
+@cocotb.test()
+async def test_c_bnez(dut):
+    """C.BNEZ rs1', offset - Branch if not equal to zero (CB format)"""
+    await setup_decoder(dut)
+
+    for _ in range(20):
+        rs1 = random.randint(0, 7)
+        offset = random.randint(-256, 255) << 1
+        dut.instr.value = rv32c.encode_c_bnez(rs1, offset)
+        await ClockCycles(dut.clk, 1)
+
+        expected_rs1 = 8 + rs1
+
+        assert dut.mem_opcode.value == 0b001, "C.BNEZ uses BNE (mem_opcode=001)"
+        assert dut.rs1.value == expected_rs1, (
+            f"rs1 mismatch: expected x{expected_rs1}, got x{dut.rs1.value}"
+        )
+        assert dut.rs2.value == 0, "C.BNEZ compares against x0"
+        assert dut.imm.value.to_signed() == offset, (
+            f"offset mismatch: expected {offset}, got {dut.imm.value.to_signed()}"
+        )
+        _verify_control_flags(dut, is_branch=1)
