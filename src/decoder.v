@@ -98,7 +98,6 @@
     Quadrant 3 is does not exist, it is just 32b instructions.
 */
 
-
 module tinymoa_decoder #(parameter REG_ADDR_WIDTH = 4) (
     input [31:0] instr,
 

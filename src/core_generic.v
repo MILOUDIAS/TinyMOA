@@ -1,10 +1,10 @@
-// Generic RV32EC nibble-serial CPU core
-// **NOT **instantiated by tinymoa.v
-// this is the "ideal" 32b-addressed version
-// used to verify correctness before creating the area-optimized core.v
 `default_nettype none
 `timescale 1ns / 1ps
 
+// Generic RV32EC nibble-serial CPU core
+// **NOT** instantiated by tinymoa.v
+// this is the "ideal" 32b-addressed version
+// used to verify correctness before creating the area-optimized core.v
 module tinymoa_core_generic (
     input wire        clk,
     input wire        nrst,

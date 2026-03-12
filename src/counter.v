@@ -1,6 +1,7 @@
 `default_nettype none
 `timescale 1ns / 1ps
 
+// Program counter
 module tinymoa_counter (
     input  wire       clk,
     input  wire       load_en,
