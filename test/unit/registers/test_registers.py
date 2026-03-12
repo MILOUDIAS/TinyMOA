@@ -51,10 +51,14 @@ async def test_all_registers(dut):
     """Test write/read for all 16 registers including hardcoded ones."""
     await setup_registers(dut)
 
+    # The PC is 24b here, not 32b
+    # - We only see 0x400 from $ga
+    # - We have to replace $tp with 0x400000 to fit (normally 0x8000000)
     hardcoded = {
         0: 0x00000000,  # x0 is $zero
         3: 0x01000400,  # x3 is $ga
-        4: 0x08000000,  # x4 is $tp
+        # 4: 0x08000000,  # x4 is $tp
+        4: 0x00400000,  # x4 is $tp
     }
 
     test_values = {}

@@ -32,19 +32,27 @@ module tinymoa_register_file #(parameter REG_COUNT = 16) (
                 assign register_access[i] = 4'h0;
             end else if (i == 3) begin : gen_reg_gp
 
-                // Generate a "pseudo-harcoded" dynamic combinational value to produce `0x01000400` for the global pointer (gp)
-                // Since we read over 8 cycles and update nibble_counter each cycle, we reuse that wire to generate the value
-                // This saves us something like 32 FFs by using 2 comparators and simple combinational logic for a 32b value
-                // 0x01000400 = 0000_0001_0000_0000_0000_0100_0000_0000
-                // Nibble #   =    7    6    5    4    3    2    1    0
+                // gp (x3) is pseudo-hardcoded to 0x01000400 via combinational logic.
+                // We only see 0x400 since TinyMOA's PC is 24b, not 32b.
+                //    0x01000400 -> 0x000400
+                // 
+                // By pure chance, an appropriate SRAM global offset is also 0x400.
+                // This is the midpoint of the 2KB scratchpad.
+                //
+                // Nibble breakdown:
+                // 0x000400 = 0000_0000_0000_0100_0000_0000
+                // Nibble # =    5    4    3    2    1    0
                 assign register_access[i] = {1'b0, (nibble_counter == 2), 1'b0, (nibble_counter == 6)};
             end else if (i == 4) begin : gen_reg_tp
 
-                // Generate a pseudo-hardcoded value to produce `0x8000000` for the thread pointer (tp) register
-                // See the above note on how/why (NOTE: We only use 1 comparator here since only 1 nibble is non-zero)
-                // 0x8000000  = 0000_1000_0000_0000_0000_0000_0000_0000
-                // Nibble #   =    7    6    5    4    3    2    1    0
-                assign register_access[i] = {(nibble_counter == 6), 3'b0};
+                // tp (x4) is pseudo-hardcoded to 0x00400000 via combinational logic
+                // We have to replace the normal 0x08000000 with 0x00400000 to fit in the 24b PC space.
+                //    0x08000000 -> 0x400000
+                //
+                // Nibble breakdown:
+                // 0x400000 = 0100_0000_0000_0000_0000_0000
+                // Nibble # =    5    4    3    2    1    0
+                assign register_access[i] = {1'b0, (nibble_counter == 5), 2'b0};
             end else begin : gen_reg_normal
                 always @(posedge clk) begin
                     if (write_en && write_dest == i)
