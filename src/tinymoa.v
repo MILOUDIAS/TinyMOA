@@ -13,11 +13,11 @@ module tinymoa_top (
 );
 
     // Core memory bus
-    wire [23:0] mem_addr;
+    wire [23:0] mem_addr = 24'h0;
     wire        mem_read;
     wire        mem_write;
-    wire [31:0] mem_a_din;
-    wire [31:0] mem_b_din;
+    wire [31:0] mem_a_din = 32'h0;
+    wire [31:0] mem_b_din = 32'h0;
     wire [1:0]  mem_size;
 
     // Address decode
@@ -49,11 +49,11 @@ module tinymoa_top (
     );
 
     // SRAM scratchpad (512x32 = 2 KB)
-    wire [8:0] sram_a_addr = mem_addr[10:2];
-    reg [31:0] sram_a_dout;
-    wire [8:0] sram_b_addr;
-    reg [31:0] sram_b_dout;
-    reg        sram_ready;
+    wire [8:0]  sram_a_addr = mem_addr[10:2];
+    wire [31:0] sram_a_dout;
+    wire [8:0]  sram_b_addr = 9'b0;
+    wire [31:0] sram_b_dout;
+    reg         sram_ready;
 
     // IHP SG13G2 512x32 single-port SRAM macro
     wire sram_en  = is_sram && (mem_read || mem_write);
