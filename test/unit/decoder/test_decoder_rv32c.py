@@ -23,7 +23,6 @@ async def setup_decoder(dut):
 
     dut.nrst.value = 0
     dut.instr.value = 0
-    dut.imm.value = 0
     await ClockCycles(dut.clk, 1)
     dut.nrst.value = 1
 
