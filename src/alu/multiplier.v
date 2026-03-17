@@ -8,6 +8,7 @@
 module tinymoa_multiplier #(parameter B_IN_WIDTH = 16) (
     input clk,
     input nrst,
+    input mul_clr, // Reset accumulator before a new multiply (asserted at end of S_EXECUTE)
 
     input [3:0] a_in,
     input [B_IN_WIDTH-1:0] b_in,
@@ -20,7 +21,7 @@ module tinymoa_multiplier #(parameter B_IN_WIDTH = 16) (
     wire [B_IN_WIDTH+3:0] partial_product = {4'b0, accumulator} + {{B_IN_WIDTH{1'b0}}, a_in} * {4'd0, b_in};
 
     always @(posedge clk) begin
-        if (!nrst)
+        if (!nrst || mul_clr)
             accumulator <= {B_IN_WIDTH{1'b0}};
         else
             accumulator <= (a_in != 4'b0000) ? partial_product[B_IN_WIDTH+3:4] : {4'b0000, accumulator[B_IN_WIDTH-1:4]};

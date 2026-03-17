@@ -23,6 +23,7 @@ module tinymoa_core (
     localparam S_WRITEBACK = 3'd3;
     localparam S_MEM      = 3'd4;
     localparam S_LOAD_WB  = 3'd5;
+    localparam S_MUL      = 3'd6; // Second execute pass for C.MUL with correct b_in
 
     reg [2:0] state;
     reg [2:0] nibble_counter;
@@ -129,13 +130,19 @@ module tinymoa_core (
         .result(shifter_result_nibble)
     );
 
+    // Detect MUL at end of S_EXECUTE to reset multiplier accumulator
+    wire is_shift = (dec_alu_opcode[2:0] == 3'b001) || (dec_alu_opcode[2:0] == 3'b101);
+    wire is_mul   = (dec_alu_opcode == 4'b1010);
+    wire mul_clr  = (state == S_EXECUTE) && (nibble_counter == 3'd7) && is_mul;
+
     // Multiplier
     wire [3:0] mul_result_nibble;
     tinymoa_multiplier #(.B_IN_WIDTH(16)) multiplier (
         .clk(clk),
         .nrst(nrst),
+        .mul_clr(mul_clr),
         .a_in(reg_rs1_nibble),
-        .b_in(rs1_full[15:0]),  // Uses rs2 lower 16 bits actually, fixes ALU routing
+        .b_in(rs2_full[15:0]),  // Lower 16 bits of rs2; valid at start of S_MUL
         .product(mul_result_nibble)
     );
 
@@ -151,8 +158,6 @@ module tinymoa_core (
 
     // ALU result mux
     reg [31:0] alu_result_full;
-    wire is_shift = (dec_alu_opcode[2:0] == 3'b001) || (dec_alu_opcode[2:0] == 3'b101);
-    wire is_mul   = (dec_alu_opcode == 4'b1010);
     wire is_slt   = (dec_alu_opcode[2:1] == 2'b01);  // SLT or SLTU
 
     reg [3:0] result_nibble;
@@ -173,8 +178,9 @@ module tinymoa_core (
     // TODO: Could make this easier to read.
     wire writes_rd = dec_is_alu_reg || dec_is_alu_imm || dec_is_lui || dec_is_auipc
                    || dec_is_jal || dec_is_jalr || dec_is_load;
-    assign reg_write_en = ((state == S_EXECUTE) && writes_rd && !dec_is_load)
-                        || (state == S_LOAD_WB);
+    assign reg_write_en = ((state == S_EXECUTE) && writes_rd && !dec_is_load && !is_mul)
+                        || (state == S_LOAD_WB)
+                        || (state == S_MUL);
 
     // JAL/JALR link address: PC + instruction byte length
     wire [23:0] pc_plus_ilen = pc + {21'd0, dec_instr_len, 1'b0};
@@ -182,6 +188,7 @@ module tinymoa_core (
                                    ? pc_plus_ilen[{nibble_counter, 2'b00} +: 4] : 4'd0;
 
     assign reg_wdata_nibble = (state == S_LOAD_WB) ? load_nibble
+                            : (state == S_MUL)    ? mul_result_nibble
                             : (dec_is_jal || dec_is_jalr) ? pc_plus_ilen_nibble
                             : result_nibble;
 
@@ -252,6 +259,8 @@ module tinymoa_core (
                     if (nibble_counter == 3'd7) begin
                         if (dec_is_load || dec_is_store)
                             state <= S_MEM;
+                        else if (is_mul)
+                            state <= S_MUL;
                         else
                             state <= S_WRITEBACK;
                     end
@@ -271,7 +280,7 @@ module tinymoa_core (
 
                 S_MEM: begin
                     mem_addr_reg <= alu_result_full[23:0];
-                    mem_size <= dec_mem_opcode[2:1];
+                    mem_size <= dec_mem_opcode[1:0];
                     if (dec_is_store) begin
                         mem_write <= 1'b1;
                         mem_wdata <= rs2_full;
@@ -299,6 +308,14 @@ module tinymoa_core (
                 S_LOAD_WB: begin
                     load_wb_count <= load_wb_count + 3'd1;
                     if (load_wb_count == 3'd7)
+                        state <= S_WRITEBACK;
+                end
+
+                // Second execute pass for C.MUL. Accumulator was reset at the end of
+                // S_EXECUTE (via mul_clr), so this pass starts clean with b_in=rs2_full[15:0]
+                // fully assembled. reg_write_en is active, writing mul_result_nibble each cycle.
+                S_MUL: begin
+                    if (nibble_counter == 3'd7)
                         state <= S_WRITEBACK;
                 end
             endcase
