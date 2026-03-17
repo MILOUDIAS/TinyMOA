@@ -367,7 +367,7 @@ async def test_c_jr(dut):
         assert dut.rs1.value == rs1, (
             f"rs1 mismatch: expected x{rs1}, got x{dut.rs1.value}"
         )
-        assert dut.rd.value == 1, "C.JR sets rd=x1 (ra)"
+        assert dut.rd.value == 0, "C.JR = JALR x0, rs1, 0 (no link)"
         assert dut.imm.value.to_unsigned() == 0, "C.JR has zero offset"
         _verify_control_flags(dut, is_jalr=1)
 

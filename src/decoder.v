@@ -428,7 +428,7 @@ module tinymoa_decoder #(parameter REG_ADDR_WIDTH = 4) (
                             is_jalr = 1;
                             imm = 0;
                             read_addr_a = instr[10:7];
-                            write_dest = 4'd1;  // TinyMOA: C.JR also writes to x1
+                            write_dest = 4'd0;  // C.JR = JALR x0, rs1, 0 — no link
                         end else begin  // C.MV: bit 12 = 0, rs2 != 0
                             is_alu_reg = 1;
                             read_addr_a = 4'd0;
