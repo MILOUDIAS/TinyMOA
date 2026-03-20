@@ -57,9 +57,7 @@ def analyze_retention_sweep(file_path):
         medianprops=dict(color="red", linewidth=2),
     )
 
-    plt.axhline(
-        100.0, color="black", linestyle="--", label="100us Target (5000 Cycles)"
-    )
+    plt.axhline(60.0, color="black", linestyle="--", label="60us Target (3000 Cycles)")
     plt.title("Test 4: Retention Time by Write Current (SG13G2)")
     plt.xlabel("Write Current I_BL (uA)")
     plt.ylabel("Time to Fail (us) [Drops > Half-LSB]")
