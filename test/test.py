@@ -8,9 +8,7 @@ from pathlib import Path
 from cocotb_test import simulator
 
 
-def run_unit_test(
-    src_module, test_module, test_type="unit", dir=None, extra_sources=None
-):
+def run_test(src_module, test_module, test_type="unit", dir=None, extra_sources=None):
     """
     Run a standard cocotb unit test using pytest and cocotb-test.
     """
@@ -41,57 +39,13 @@ def run_unit_test(
     )
 
 
-# ALU Unit Tests
-def test_alu():
-    run_unit_test("alu", "alu", dir="alu")
-
-
-def test_multiplier():
-    run_unit_test("multiplier", "multiplier", dir="alu")
-
-
-def test_shifter():
-    run_unit_test("shifter", "shifter", dir="alu")
-
-
-# Decoder Unit Tests
-def test_decoder_integration():
-    run_unit_test("decoder", "decoder_integration")
-
-
-def test_decoder_moa():
-    run_unit_test("decoder", "decoder_moa")
-
-
-def test_decoder_rv32c():
-    run_unit_test("decoder", "decoder_rv32c")
-
-
-def test_decoder_rv32i():
-    run_unit_test("decoder", "decoder_rv32i")
-
-
-# Register Unit Tests
-def test_registers():
-    run_unit_test("registers", "registers")
-
-
-def test_counter():
-    run_unit_test("counter", "counter")
-
-
-# CSR Unit Tests
-def test_csr():
-    run_unit_test("csr", "csr")
-
-
 # Integration tests
 # def test_main_design():
-#     run_unit_test("placeholder", "placeholder", test_type="integration")
+#     run_test("placeholder", "placeholder", test_type="integration")
 
 
 def test_core():
-    run_unit_test(
+    run_test(
         "core",
         "core",
         test_type="integration",
@@ -106,7 +60,7 @@ def test_core():
 
 
 def test_core_generic():
-    run_unit_test(
+    run_test(
         "core_generic",
         "core_generic",
         test_type="integration",
@@ -118,6 +72,64 @@ def test_core_generic():
             "alu/multiplier.v",
         ],
     )
+
+
+# Unit tests
+# ALU Unit Tests
+def test_alu():
+    run_test("alu", "alu", dir="alu")
+
+
+def test_multiplier():
+    run_test("multiplier", "multiplier", dir="alu")
+
+
+def test_shifter():
+    run_test("shifter", "shifter", dir="alu")
+
+
+# Decoder Unit Tests
+def test_decoder_integration():
+    run_test("decoder", "decoder_integration")
+
+
+def test_decoder_moa():
+    run_test("decoder", "decoder_moa")
+
+
+def test_decoder_rv32c():
+    run_test("decoder", "decoder_rv32c")
+
+
+def test_decoder_rv32i():
+    run_test("decoder", "decoder_rv32i")
+
+
+# QSPI flash/PSRAM unit tests
+def test_qspi_controller():
+    run_test("qspi_controller", "qspi_controller", dir="memory")
+
+
+def test_qspi_flash():
+    run_test("qspi_controller", "qspi_flash", dir="memory")
+
+
+def test_qspi_psram():
+    run_test("qspi_controller", "qspi_psram", dir="memory")
+
+
+# Register Unit Tests
+def test_registers():
+    run_test("registers", "registers")
+
+
+def test_counter():
+    run_test("counter", "counter")
+
+
+# CSR Unit Tests
+def test_csr():
+    run_test("csr", "csr")
 
 
 if __name__ == "__main__":
