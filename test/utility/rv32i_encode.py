@@ -1,15 +1,6 @@
-"""Instruction encoders for the RV32I base instruction set
-
-Manual encoding without external dependencies.
-Provides clean, testable instruction encoders.
-
-RISC-V ISA reference:
-https://ww1.microchip.com/downloads/aemDocuments/documents/FPGA/ProductDocuments/UserGuides/ip_cores/directcores/riscvspec.pdf
-"""
-
-# ============================================================================
-# RV32I Base (32b) Instruction Encoding Functions
-# ============================================================================
+# ==========================================================
+# === RV32I Base (32-bit) Instruction Encoding Functions ===
+# ==========================================================
 
 
 def encode_r_type(funct7, rs2, rs1, funct3, rd, opcode):
@@ -85,11 +76,11 @@ def encode_j_type(imm, rd, opcode):
     )
 
 
-# ============================================================================
-# RV32E BASE INSTRUCTIONS (32-bit)
-# ============================================================================
-
-# --- R-Type ALU Operations ---
+# =================================
+# === RV32I 32-bit Instructions ===
+# =================================
+# === R-Type ALU Operations     ===
+# =================================
 
 
 def encode_add(rd, rs1, rs2):
@@ -247,7 +238,9 @@ def encode_srai(rd, rs1, shamt):
     return encode_i_type(0x400 | (shamt & 0x1F), rs1, 0x5, rd, 0x13)
 
 
-# --- Load Operations ---
+# =======================
+# === Load Operations ===
+# ========================
 
 
 def encode_lw(rd, rs1, imm):
@@ -290,7 +283,9 @@ def encode_lhu(rd, rs1, imm):
     return encode_i_type(imm, rs1, 0x5, rd, 0x03)
 
 
-# --- Store Operations ---
+# ========================
+# === Store Operations ===
+# ========================
 
 
 def encode_sw(rs1, rs2, imm):
@@ -317,7 +312,9 @@ def encode_sb(rs1, rs2, imm):
     return encode_s_type(imm, rs2, rs1, 0x0, 0x23)
 
 
-# --- Unconditional jump operations ---
+# =======================
+# === Jump Operations ===
+# =======================
 
 
 def encode_jal(rd, imm):
@@ -336,7 +333,9 @@ def encode_jalr(rd, rs1, imm):
     return encode_i_type(imm, rs1, 0x0, rd, 0x67)
 
 
-# --- Branch Operations ---
+# =========================
+# === Branch Operations ===
+# =========================
 
 
 def encode_beq(rs1, rs2, imm):
@@ -387,7 +386,9 @@ def encode_bgeu(rs1, rs2, imm):
     return encode_b_type(imm, rs2, rs1, 0x7, 0x63)
 
 
-# --- Upper Immediate Operations ---
+# ==================================
+# === Upper Immediate Operations ===
+# ==================================
 
 
 def encode_lui(rd, imm):
@@ -406,7 +407,9 @@ def encode_auipc(rd, imm):
     return encode_u_type(imm, rd, 0x17)
 
 
-# --- System Operations ---
+# =========================
+# === System Operations ===
+# =========================
 
 
 def encode_ecall():
@@ -457,7 +460,9 @@ def encode_wfi():
     return 0x10500073
 
 
-# --- CSR Instructions ---
+# ======================
+# === CSR Operations ===
+# ======================
 
 
 def encode_csrrw(rd, rs1, csr):
@@ -508,9 +513,9 @@ def encode_csrrci(rd, uimm, csr):
     return encode_i_type(csr, uimm & 0x1F, 0x7, rd, 0x73)
 
 
-# ============================================================================
-# RV32F Floating Point Instructions (Not Used - Included for Completeness)
-# ============================================================================
+# ================================================================================
+# === RV32F Floating Point Instructions (Not Used - Included for Completeness) ===
+# ================================================================================
 
 
 def _encode_flw(rd, rs1, imm):  # Not used
