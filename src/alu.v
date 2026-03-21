@@ -49,7 +49,8 @@ module tinymoa_alu (
         cmp_out = cmp_in;
 
         case (opcode)
-            4'b0000: result = sum[3:0];    // ADD or SUB (b_inv handles inversion, same adder)
+            4'b0000: result = sum[3:0];    // ADD
+            4'b1000: result = sum[3:0];    // SUB (b_inv already inverts B)
             4'b0100: result = xor_out;     // XOR
             4'b0110: result = a_in | b_in; // OR
             4'b0111: result = a_in & b_in; // AND
