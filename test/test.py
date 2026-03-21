@@ -8,7 +8,14 @@ from pathlib import Path
 from cocotb_test import simulator
 
 
-def run_test(src_module, test_module, test_type="unit", dir=None, extra_sources=None):
+def run_test(
+    src_module,
+    test_module,
+    test_type="unit",
+    dir=None,
+    extra_sources=None,
+    defines=None,
+):
     """
     Run a standard cocotb unit test using pytest and cocotb-test.
     """
@@ -34,67 +41,93 @@ def run_test(src_module, test_module, test_type="unit", dir=None, extra_sources=
         toplevel=toplevel,
         module=module,
         simulator="icarus",
+        defines=defines or [],
         sim_build=str(SIM_BUILD / src_module),
         python_search=[str(PROJECT_DIR)],
     )
 
 
-# Integration tests
-# def test_main_design():
-#     run_test("placeholder", "placeholder", test_type="integration")
+# === Integration tests ===
 
 
-def test_core():
+def test_cpu_integration():
     run_test(
-        "core",
-        "core",
+        "cpu",
+        "cpu",
         test_type="integration",
         extra_sources=[
+            "counter.v",
             "decoder.v",
             "registers.v",
-            "alu/alu.v",
-            "alu/shifter.v",
-            "alu/multiplier.v",
+            "alu.v",
         ],
     )
 
 
-# Unit tests
-# ALU Unit Tests
-def test_alu():
-    run_test("alu", "alu", dir="alu")
+def test_dcim_integration():
+    run_test(
+        "dcim",
+        "dcim",
+        dir="dcim",
+        test_type="integration",
+        extra_sources=["dcim/compressor.v"],
+    )
 
 
-def test_multiplier():
-    run_test("multiplier", "multiplier", dir="alu")
+def test_tinymoa_integration():
+    run_test(
+        "tinymoa",
+        "tinymoa",
+        test_type="integration",
+        extra_sources=[
+            "cpu.v",
+            "counter.v",
+            "decoder.v",
+            "registers.v",
+            "alu.v",
+            "tcm.v",
+            "qspi.v",
+            "dcim/dcim.v",
+            "dcim/compressor.v",
+            "bootloader.v",
+        ],
+        defines=["BEHAVIORAL"],
+    )
 
 
-def test_shifter():
-    run_test("shifter", "shifter", dir="alu")
+# === Unit tests ===
 
 
-# Bootloader unit tests
-def test_bootloader():
+def test_alu_unit():
+    run_test("alu", "alu")
+
+
+def test_bootloader_unit():
     run_test("bootloader", "bootloader")
 
 
-# QSPI unit tests
-def test_qspi_controller():
-    run_test("qspi_controller", "qspi_controller")
+def test_counter_unit():
+    run_test("counter", "counter")
 
 
-# Register unit tests
-def test_registers():
+def test_cpu_unit():
+    run_test("cpu", "cpu")
+
+
+def test_dcim_unit():
+    run_test("dcim", "dcim", dir="dcim")
+
+
+def test_qspi_unit():
+    run_test("qspi", "qspi")
+
+
+def test_registers_unit():
     run_test("registers", "registers")
 
 
-# TCM unit tests
-def test_tcm():
-    run_test("tcm", "tcm")
-
-
-def test_counter():
-    run_test("counter", "counter")
+def test_tcm_unit():
+    run_test("tcm", "tcm", defines=["BEHAVIORAL"])
 
 
 if __name__ == "__main__":
