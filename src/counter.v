@@ -12,20 +12,23 @@ module tinymoa_counter #(
 
     input en,
     input wen,
-    input [DATA_WIDTH-1:0] data_in,
+    input [DATA_WIDTH-1:0]  data_in,
 
-    output reg [DATA_WIDTH-1:0] result,
+    output [DATA_WIDTH-1:0] result,
     output c_out
 );
-    assign c_out = &result;
+    reg [DATA_WIDTH-1:0] count;
 
     always @(posedge clk or negedge nrst) begin
         if (!nrst)
-            result <= {DATA_WIDTH{1'b0}};
+            count <= {DATA_WIDTH{1'b0}};
         else if (wen)
-            result <= data_in;
+            count <= data_in;
         else if (en)
-            result <= result + 1;
+            count <= count + 1;
     end
+
+    assign result = count;
+    assign c_out = &count;
 
 endmodule
