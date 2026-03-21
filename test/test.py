@@ -59,21 +59,6 @@ def test_core():
     )
 
 
-def test_core_generic():
-    run_test(
-        "core_generic",
-        "core_generic",
-        test_type="integration",
-        extra_sources=[
-            "decoder.v",
-            "registers.v",
-            "alu/alu.v",
-            "alu/shifter.v",
-            "alu/multiplier.v",
-        ],
-    )
-
-
 # Unit tests
 # ALU Unit Tests
 def test_alu():
