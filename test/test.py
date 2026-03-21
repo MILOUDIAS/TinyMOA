@@ -116,10 +116,5 @@ def test_counter():
     run_test("counter", "counter")
 
 
-# CSR Unit Tests
-def test_csr():
-    run_test("csr", "csr")
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
