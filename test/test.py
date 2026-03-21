@@ -99,7 +99,15 @@ def test_tinymoa_integration():
 
 
 def test_alu_unit():
-    run_test("alu", "alu")
+    run_test("alu", "alu", dir="alu")
+
+
+def test_multiplier_unit():
+    run_test("multiplier", "multiplier", dir="alu")
+
+
+def test_shifter_unit():
+    run_test("shifter", "shifter", dir="alu")
 
 
 def test_bootloader_unit():

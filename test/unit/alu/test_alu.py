@@ -1,7 +1,5 @@
 """
-Test suite for the ALU (tinymoa_alu, tinymoa_shifter, tinymoa_multiplier)
-
-tinymoa_alu:
+Test suite for the ALU (tinymoa_alu)
 - add_basic
 - add_carry_propagation
 - add_overflow_wrap
@@ -21,28 +19,6 @@ tinymoa_alu:
 - czero_nez
 - carry_chain_across_nibbles
 - cmp_out_accumulation_across_nibbles
-
-tinymoa_shifter:
-- sll_by_zero
-- sll_by_one
-- sll_by_sixteen
-- sll_by_thirtyone
-- srl_by_one
-- srl_by_sixteen
-- srl_by_thirtyone
-- sra_positive_by_one
-- sra_negative_by_one
-- sra_negative_by_thirtyone
-- nibble_extraction_all_positions
-
-tinymoa_multiplier:
-- positive_times_positive
-- negative_times_positive
-- negative_times_negative
-- zero_times_n
-- max_times_max
-- min_times_min
-- product_nibble_extraction
 """
 
 import random
