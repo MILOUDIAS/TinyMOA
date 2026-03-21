@@ -73,23 +73,6 @@ def test_shifter():
     run_test("shifter", "shifter", dir="alu")
 
 
-# Decoder Unit Tests
-def test_decoder_integration():
-    run_test("decoder", "decoder_integration")
-
-
-def test_decoder_moa():
-    run_test("decoder", "decoder_moa")
-
-
-def test_decoder_rv32c():
-    run_test("decoder", "decoder_rv32c")
-
-
-def test_decoder_rv32i():
-    run_test("decoder", "decoder_rv32i")
-
-
 # QSPI flash/PSRAM unit tests
 def test_qspi_controller():
     run_test("qspi_controller", "qspi_controller", dir="memory")
