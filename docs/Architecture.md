@@ -62,15 +62,15 @@ DCIM default base addresses in `dcim.v` match this layout (`cfg_weight_base = 0x
 
 1. Fetch `IF`: 1 cycle if TCM, stall >8 cycles if QSPI
 2. Decode `ID`: 1 cycle
-3. Execute `EX`: 8 cycles (`RV32I`) / 4 cycles (`RV32C`\*)
+3. Execute `EX`: 8 cycles (all ALU ops produce 32-bit results, so 8 nibbles always)
 4. Writeback `WB`: 1 cycle (update flags and PC)
 5. Memory `MEM`: 1 cycle if TCM, stall >8 cycles if QSPI (load/store only, wait for mem_ready)
 
-\* C.MUL is a Zcb compressed instruction but takes 8 cycles.
+Note: the ALU result is fully computed after 8 clock edges but requires 1 additional cycle for the final nibble's NBA to resolve before reading. Effectively 8+1 for external consumers.
 
 Cycle counts (TCM):
 - **RV32I ALU**: 1(F) + 1(D) + 8(E) + 1(W) = **11 cycles**
-- **RV32C ALU**: 1(F) + 1(D) + 4(E) + 1(W) = **7 cycles**
+- **RV32C ALU**: 1(F) + 1(D) + 8(E) + 1(W) = **11 cycles**
 - **Load/Store**: + MEM stall (1 cycle TCM, variable QSPI)
 - **C.MUL**: 1(F) + 1(D) + ~12(E: 4 collect + 1 multiply + 8 shift out) + 1(W)
 - **Shifts**: 1(F) + 1(D) + ~9(E: 1 read shamt + 8 shift) + 1(W)
