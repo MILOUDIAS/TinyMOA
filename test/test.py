@@ -59,9 +59,7 @@ def test_cpu_integration():
             "counter.v",
             "decoder.v",
             "registers.v",
-            "alu/alu.v",
-            "alu/shifter.v",
-            "alu/multiplier.v",
+            "alu.v",
         ],
     )
 
@@ -86,9 +84,7 @@ def test_tinymoa_integration():
             "counter.v",
             "decoder.v",
             "registers.v",
-            "alu/alu.v",
-            "alu/shifter.v",
-            "alu/multiplier.v",
+            "alu.v",
             "tcm.v",
             "qspi.v",
             "dcim/dcim.v",
@@ -103,15 +99,7 @@ def test_tinymoa_integration():
 
 
 def test_alu_unit():
-    run_test("alu", "alu", dir="alu")
-
-
-def test_multiplier_unit():
-    run_test("multiplier", "multiplier", dir="alu")
-
-
-def test_shifter_unit():
-    run_test("shifter", "shifter", dir="alu")
+    run_test("alu", "alu")
 
 
 def test_bootloader_unit():
@@ -130,9 +118,7 @@ def test_cpu_unit():
             "counter.v",
             "decoder.v",
             "registers.v",
-            "alu/alu.v",
-            "alu/shifter.v",
-            "alu/multiplier.v",
+            "alu.v",
         ],
     )
 

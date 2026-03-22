@@ -22,12 +22,15 @@ module tinymoa_alu (
     input  [3:0]  opcode,
     input  [31:0] a_in,
     input  [31:0] b_in,
+    input         c_in,
     output [31:0] result
 );
 
     // opcodes 00xx all use the adder; 0001/0010/0011 subtract
     wire is_sub = opcode[0] | opcode[1];
-    wire [31:0] sum = is_sub ? (a_in - b_in) : (a_in + b_in);
+    wire [31:0] sum = is_sub ?
+        (a_in - b_in + {31'd0, c_in}) :
+        (a_in + b_in + {31'd0, c_in});
 
     reg [31:0] out;
     always @(*) begin
