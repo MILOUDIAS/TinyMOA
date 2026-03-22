@@ -1,60 +1,174 @@
 """
-Test suite for the ALU (tinymoa_multiplier)
+Test suite for tinymoa_multiplier (pipelined signed 16x16->32 multiplier).
+TB wraps nibble_ct internally; exposes 32-bit product after 9 clock cycles.
 - positive_times_positive
 - negative_times_positive
+- positive_times_negative
 - negative_times_negative
 - zero_times_n
+- n_times_zero
 - max_times_max
 - min_times_min
-- product_nibble_extraction
+- min_times_max
+- one_identity
+- minus_one_negate
+- random_stress
 """
 
 import random
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, RisingEdge
+
+
+def to_signed32(v):
+    """Interpret a raw 32-bit unsigned DUT output as signed."""
+    v = v & 0xFFFFFFFF
+    return v if v < 0x80000000 else v - 0x100000000
 
 
 async def setup(dut):
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
     dut.nrst.value = 0
-    dut.opcode.value = 0
     dut.a_in.value = 0
     dut.b_in.value = 0
-    dut.c_in.value = 0
+    dut.product.value = 0
     await ClockCycles(dut.clk, 1)
     dut.nrst.value = 1
 
 
-async def run_alu_op(dut, opcode, a, b, c=0, iterations=150):
-    """Run ALU operation over many random inputs."""
-    dut.opcode.value = int(opcode)
-    dut.a_in.value = int(a)
-    dut.b_in.value = int(b)
-    dut.c_in.value = int(c)
-    await ClockCycles(dut.clk, 1)
-    results = []
-    for _ in range(iterations):
-        await ClockCycles(dut.clk, 7)
-        next_a = random.randint(0, 0xFFFFFFFF)
-        next_b = random.randint(0, 0xFFFFFFFF)
-        dut.a_in.value = int(next_a)
-        dut.b_in.value = int(next_b)
-        await ClockCycles(dut.clk, 1)
-        results.append((int(dut.result.value), a, b))
-        a, b = next_a, next_b
-    return results
+async def multiply(dut, a, b):
+    """Drive a and b (Python ints, signed 16-bit range), wait 9 cycles, return signed 32-bit product."""
+    dut.a_in.value = a & 0xFFFF
+    dut.b_in.value = b & 0xFFFF
+    await RisingEdge(dut.clk)
+    await ClockCycles(dut.clk, 9) 
+    return to_signed32(int(dut.product.value))
+
+
+# === Boundary cases ===
 
 
 @cocotb.test()
 async def positive_times_positive(dut):
-    """Test multiply positive * positive"""
+    """Two positive operands produce a positive product"""
     await setup(dut)
-    a = random.randint(0, 0xFFFFFFFF)
-    b = random.randint(0, 0xFFFFFFFF)
-    for result, a_val, b_val in await run_alu_op(dut, 0b0000, a, b):
-        expected = (a_val * b_val) & 0xFFFFFFFF
-        assert result == expected, (
-            f"{a_val} * {b_val}: expected {expected}, got {result}"
-        )
+    a = random.randint(1, 0x7FFF)
+    b = random.randint(1, 0x7FFF)
+    result = await multiply(dut, a, b)
+    expected = a * b
+    assert result == expected, f"{a} * {b}: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def negative_times_positive(dut):
+    """Negative * positive = negative product"""
+    await setup(dut)
+    a = random.randint(-32768, -1)
+    b = random.randint(1, 0x7FFF)
+    result = await multiply(dut, a, b)
+    expected = a * b
+    assert result == expected, f"{a} * {b}: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def positive_times_negative(dut):
+    """Positive * negative = negative product"""
+    await setup(dut)
+    a = random.randint(1, 0x7FFF)
+    b = random.randint(-32768, -1)
+    result = await multiply(dut, a, b)
+    expected = a * b
+    assert result == expected, f"{a} * {b}: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def negative_times_negative(dut):
+    """Negative * negative = positive product"""
+    await setup(dut)
+    a = random.randint(-32768, -1)
+    b = random.randint(-32768, -1)
+    result = await multiply(dut, a, b)
+    expected = a * b
+    assert result > 0, f"{a} * {b}: expected positive, got {result}"
+    assert result == expected, f"{a} * {b}: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def zero_times_n(dut):
+    """0 * n = 0 for any n"""
+    await setup(dut)
+    b = random.randint(-32768, 32767)
+    result = await multiply(dut, 0, b)
+    assert result == 0, f"0 * {b}: expected 0, got {result}"
+
+
+@cocotb.test()
+async def n_times_zero(dut):
+    """n * 0 = 0 for any n"""
+    await setup(dut)
+    a = random.randint(-32768, 32767)
+    result = await multiply(dut, a, 0)
+    assert result == 0, f"{a} * 0: expected 0, got {result}"
+
+
+@cocotb.test()
+async def max_times_max(dut):
+    """0x7FFF * 0x7FFF = 1,073,676,289"""
+    await setup(dut)
+    result = await multiply(dut, 0x7FFF, 0x7FFF)
+    expected = 32767 * 32767
+    assert result == expected, f"max*max: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def min_times_min(dut):
+    """-32768 * -32768 = +1,073,741,824 (0x40000000, fits in signed 32-bit)"""
+    await setup(dut)
+    result = await multiply(dut, -32768, -32768)
+    expected = (-32768) * (-32768)
+    assert result == expected, f"min*min: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def min_times_max(dut):
+    """-32768 * 32767 = most negative product (-1,073,709,056)"""
+    await setup(dut)
+    result = await multiply(dut, -32768, 0x7FFF)
+    expected = (-32768) * 32767
+    assert result == expected, f"min*max: expected {expected}, got {result}"
+
+
+@cocotb.test()
+async def one_identity(dut):
+    """n * 1 = n (multiplicative identity)"""
+    await setup(dut)
+    a = random.randint(-32768, 32767)
+    result = await multiply(dut, a, 1)
+    assert result == a, f"{a} * 1: expected {a}, got {result}"
+
+
+@cocotb.test()
+async def minus_one_negate(dut):
+    """n * -1 = -n"""
+    await setup(dut)
+    a = random.randint(-32768, 32767)
+    result = await multiply(dut, a, -1)
+    expected = -a
+    assert result == expected, f"{a} * -1: expected {expected}, got {result}"
+
+
+# === Random stress ===
+
+
+@cocotb.test()
+async def random_stress(dut):
+    """200 random signed 16-bit pairs verified against Python reference"""
+    await setup(dut)
+    for _ in range(200):
+        a = random.randint(-32768, 32767)
+        b = random.randint(-32768, 32767)
+        result = await multiply(dut, a, b)
+        expected = a * b
+        assert result == expected, f"{a} * {b}: expected {expected}, got {result}"
