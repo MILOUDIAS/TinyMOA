@@ -59,7 +59,9 @@ def test_cpu_integration():
             "counter.v",
             "decoder.v",
             "registers.v",
-            "alu.v",
+            "alu/alu.v",
+            "alu/shifter.v",
+            "alu/multiplier.v",
         ],
     )
 
@@ -84,7 +86,9 @@ def test_tinymoa_integration():
             "counter.v",
             "decoder.v",
             "registers.v",
-            "alu.v",
+            "alu/alu.v",
+            "alu/shifter.v",
+            "alu/multiplier.v",
             "tcm.v",
             "qspi.v",
             "dcim/dcim.v",
@@ -119,11 +123,22 @@ def test_counter_unit():
 
 
 def test_cpu_unit():
-    run_test("cpu", "cpu")
+    run_test(
+        "cpu",
+        "cpu",
+        extra_sources=[
+            "counter.v",
+            "decoder.v",
+            "registers.v",
+            "alu/alu.v",
+            "alu/shifter.v",
+            "alu/multiplier.v",
+        ],
+    )
 
 
 def test_dcim_unit():
-    run_test("dcim", "dcim", dir="dcim")
+    run_test("dcim", "dcim", dir="dcim", extra_sources=["dcim/compressor.v"])
 
 
 def test_decoder_rv32c_unit():
