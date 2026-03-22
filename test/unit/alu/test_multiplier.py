@@ -43,7 +43,7 @@ async def multiply(dut, a, b):
     dut.a_in.value = a & 0xFFFF
     dut.b_in.value = b & 0xFFFF
     await RisingEdge(dut.clk)
-    await ClockCycles(dut.clk, 9) 
+    await ClockCycles(dut.clk, 9)
     return to_signed32(int(dut.product.value))
 
 
