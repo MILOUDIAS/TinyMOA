@@ -126,6 +126,14 @@ def test_dcim_unit():
     run_test("dcim", "dcim", dir="dcim")
 
 
+def test_decoder_rv32c_unit():
+    run_test("decoder", "decoder_rv32c")
+
+
+def test_decoder_rv32i_unit():
+    run_test("decoder", "decoder_rv32i")
+
+
 def test_qspi_unit():
     run_test("qspi", "qspi")
 
