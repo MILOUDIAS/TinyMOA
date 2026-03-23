@@ -323,7 +323,7 @@ module tinymoa_decoder (
                             alu_opcode = 4'b0000;
                             rs1        = 4'd2; // x2 (sp)
                             rd         = c_rdp;
-                            imm        = {24'b0, instr[10:7], instr[12:11], instr[5], instr[6], 2'b00};
+                            imm        = {22'b0, instr[10:7], instr[12:11], instr[5], instr[6], 2'b00};
                         end
                         3'b010: begin // C.LW
                             is_load    = 1'b1;
@@ -353,7 +353,7 @@ module tinymoa_decoder (
                                         mem_opcode = 3'b101;
                                         rs1        = c_rs1p;
                                         rd         = c_rdp;
-                                        imm        = {30'b0, instr[5], instr[6]};
+                                        imm        = {30'b0, instr[5], 1'b0};
                                     end
                                 end
                                 2'b10: begin // C.SB
@@ -377,7 +377,7 @@ module tinymoa_decoder (
                             mem_opcode = 3'b010;
                             rs1        = c_rs1p;
                             rs2        = c_rs2p;
-                            imm        = {24'b0, instr[5], instr[12:10], instr[6], 2'b00};
+                            imm        = {25'b0, instr[5], instr[12:10], instr[6], 2'b00};
                         end
                     endcase
                 end
