@@ -74,6 +74,25 @@ def test_dcim_integration():
     )
 
 
+def test_system_integration():
+    run_test(
+        "system",
+        "system",
+        test_type="integration",
+        extra_sources=[
+            "cpu.v",
+            "counter.v",
+            "decoder.v",
+            "registers.v",
+            "alu.v",
+            "tcm.v",
+            "qspi.v",
+            "dcim/dcim.v",
+            "dcim/compressor.v",
+        ],
+    )
+
+
 def test_tinymoa_integration():
     run_test(
         "tinymoa",
