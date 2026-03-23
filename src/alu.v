@@ -1,6 +1,7 @@
-// TinyMOA ALU -- full 32-bit combinational
+// TinyMOA ALU
+// Full 32-bit combinational
 //
-// Opcodes:
+// ALU internal opcodes (decoder assigns opcode):
 //   0000  ADD
 //   0001  SUB
 //   0010  SLT
