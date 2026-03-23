@@ -134,6 +134,6 @@ module RM_IHPSG13_2P_512x32_c2_bm_bist (
     input  [8:0]  B_BIST_ADDR,
     input  [31:0] B_BIST_DIN,
     input  [31:0] B_BIST_BM
-)
+);
     // Empty for LEF.
 endmodule
