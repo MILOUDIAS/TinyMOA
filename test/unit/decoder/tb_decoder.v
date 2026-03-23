@@ -6,24 +6,24 @@
 module tb_decoder (
     input [31:0] instr,
 
-    output reg  [31:0] imm,
-    output reg  [3:0]  alu_opcode,
-    output reg  [2:0]  mem_opcode, // [1:0]=size, [2]=unsigned
-    output reg  [3:0]  rs1,
-    output reg  [3:0]  rs2,
-    output reg  [3:0]  rd,
+    output reg [31:0] imm,
+    output reg [3:0]  alu_opcode,
+    output reg [2:0]  mem_opcode, // [1:0]=size, [2]=unsigned
+    output reg [3:0]  rs1,
+    output reg [3:0]  rs2,
+    output reg [3:0]  rd,
 
-    output reg         is_load,
-    output reg         is_store,
-    output reg         is_branch,
-    output reg         is_jal,
-    output reg         is_jalr,
-    output reg         is_lui,
-    output reg         is_auipc,
-    output reg         is_alu_reg,
-    output reg         is_alu_imm,
-    output reg         is_system,
-    output reg         is_compressed
+    output reg        is_load,
+    output reg        is_store,
+    output reg        is_branch,
+    output reg        is_jal,
+    output reg        is_jalr,
+    output reg        is_lui,
+    output reg        is_auipc,
+    output reg        is_alu_reg,
+    output reg        is_alu_imm,
+    output reg        is_system,
+    output reg        is_compressed
 );
     `ifdef COCOTB_SIM
     initial begin

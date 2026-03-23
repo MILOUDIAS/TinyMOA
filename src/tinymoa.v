@@ -20,7 +20,7 @@ module tinymoa_top (
     wire [1:0]  cpu_mem_size;
     wire [31:0] cpu_mem_wdata;
     wire [31:0] cpu_mem_rdata;
-    wire        cpu_mem_ready = 1'b1; // Synced, always ready
+    wire        cpu_mem_ready = 1'b1; // must change when connecting to QSPI
 
     tinymoa_cpu cpu (
         .clk       (clk),

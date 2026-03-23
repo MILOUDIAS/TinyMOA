@@ -35,7 +35,7 @@ module tb_dcim (
 
     // Behavioral TCM (512x32) shared between test driver (Port A) and DCIM (Port B)
     reg [31:0] mem [0:511];
-    reg [31:0] mem_b_dout;
+    wire [31:0] mem_b_dout;
 
     // Port A: test setup (synchronous write, combinational read)
     always @(posedge clk) begin
@@ -44,7 +44,9 @@ module tb_dcim (
     end
     assign tb_mem_rdata = mem[tb_mem_raddr];
 
-    // Port B: DCIM FSM (synchronous write, registered read)
+    // Port B: DCIM FSM (synchronous write, combinational read)
+    // Combinational read: address set via NBA at end of cycle K is
+    // visible combinationally at posedge K+1, which is when DCIM latches it.
     wire [31:0] dcim_mem_wdata;
     wire        dcim_mem_write;
     wire        dcim_mem_read;
@@ -53,8 +55,9 @@ module tb_dcim (
     always @(posedge clk) begin
         if (dcim_mem_write)
             mem[dcim_mem_addr] <= dcim_mem_wdata;
-        mem_b_dout <= mem[dcim_mem_addr];
     end
+
+    assign mem_b_dout = mem[dcim_mem_addr];
 
     tinymoa_dcim dut (
         .clk        (clk),

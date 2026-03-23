@@ -1,7 +1,6 @@
 // Boot FSM copies flash to TCM on reset, then releases CPU.
 // CPU (cpu_nrst) is held in reset until boot_done goes high.
-// We use Port A of TCM.
-// No watchdog - if QSPI stalls, CPU stays in reset.
+// No watchdog. If QSPI stalls, CPU stays in reset.
 
 `default_nettype none
 `timescale 1ns / 1ps
@@ -83,5 +82,4 @@ module tinymoa_bootloader (
             endcase
         end
     end
-
 endmodule
