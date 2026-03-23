@@ -40,14 +40,13 @@ module tb_cpu (
     reg        qspi_ready;
     reg [31:0] qspi_rdata;
 
-    // --- Debug wires ---
     wire [2:0]  dbg_state;
     wire        dbg_done;
     wire [23:0] dbg_pc;
     wire [31:0] dbg_instr;
     wire [31:0] dbg_alu_result;
 
-    // --- TCM: combinational ready + rdata (no race) ---
+    // Combinational TCM (ready + rdata) to prevent races
     wire tcm_hit = (cpu_mem_addr < 24'd256);
     wire bus_active = cpu_mem_read || cpu_mem_write;
 
@@ -64,7 +63,7 @@ module tb_cpu (
         end
     end
 
-    // --- Clocked: TCM writes + QSPI delay ---
+    // Clocked TCM writes + simulated QSPI delay
     always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
             qspi_delay <= 4'd0;
@@ -96,7 +95,6 @@ module tb_cpu (
         end
     end
 
-    // --- CPU instance ---
     tinymoa_cpu cpu (
         .clk       (clk),
         .nrst      (nrst),
