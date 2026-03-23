@@ -1,10 +1,4 @@
 // DCIM unit testbench
-//
-// Contains a behavioral 512x32 memory stub (1-cycle read latency).
-// Cocotb pre-loads the memory via tb_mem_wen/tb_mem_wdata/tb_mem_addr,
-// then starts inference and reads results back via tb_mem_raddr/tb_mem_rdata.
-// This avoids driving mem_rdata directly from Python (VPI limitation with
-// top-level input ports that feed directly into sub-module ports).
 
 `default_nettype none
 `timescale 1ns / 1ps
@@ -34,7 +28,7 @@ module tb_dcim (
     end
     `endif
 
-    reg [31:0] mem [0:511];
+    reg  [31:0] mem [0:511];
     wire [31:0] mem_b_dout;
 
     always @(posedge clk) begin
