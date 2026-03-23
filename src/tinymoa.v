@@ -132,8 +132,18 @@ module tinymoa_top (
 
     wire [31:0] tcm_a_dout;
 
+    // TCM has 1-cycle read latency (registered output). Delay ready for reads.
+    reg tcm_read_valid;
+    always @(posedge clk or negedge nrst) begin
+        if (!nrst)
+            tcm_read_valid <= 1'b0;
+        else
+            tcm_read_valid <= cpu_mem_read & cpu_is_tcm;
+    end
+
     wire cpu_bus_active = cpu_mem_read | cpu_mem_write;
-    assign cpu_mem_ready = cpu_bus_active ? (cpu_is_mmio ? dcim_mmio_ready : 1'b1) : 1'b0;
+    wire cpu_tcm_ready  = cpu_mem_write | tcm_read_valid;
+    assign cpu_mem_ready = cpu_bus_active ? (cpu_is_mmio ? dcim_mmio_ready : cpu_tcm_ready) : 1'b0;
     assign cpu_mem_rdata = cpu_is_mmio ? dcim_mmio_rdata : tcm_a_dout;
 
     wire cpu_nrst = nrst & (is_parallel ? par_cpu_nrst : 1'b1);
@@ -305,8 +315,9 @@ module tinymoa_top (
         dbg_strobe
     };
 
-    assign uio_io = is_parallel ? {par_read_nibble, 4'b0} : 8'b0;
-    assign uio_oe  = is_parallel ? {{4{par_oe}}, 4'b0}     : 8'b0;
+    assign uio_io[7:4] = (is_parallel & par_oe) ? par_read_nibble : 4'bz;
+    assign uio_io[3:0] = 4'bz;
+    assign uio_oe      = is_parallel ? {{4{par_oe}}, 4'b0}  : 8'b0;
 
     wire _unused = &{cpu_mem_size, ena, 1'b0};
 

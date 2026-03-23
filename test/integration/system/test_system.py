@@ -67,33 +67,40 @@ async def par_mmio_write(dut, reg_idx, data):
 
 async def par_mmio_read(dut, reg_idx):
     """Read 32-bit value from DCIM MMIO register via PAR.
-    par_oe triggers DCIM read (1 cycle latency) and advances nibble counter.
-    We assert par_oe for 1 settle cycle (mmio_rdata becomes valid, nibble goes to 1),
-    then toggle par_addr to reset nibble counter to 0, then read 8 nibbles.
+    1. Toggle par_addr to reset nibble counter.
+    2. Assert par_oe to trigger DCIM read and latch mmio_rdata.
+    3. Toggle addr again to reset nibble counter after the trigger.
+    4. Read 8 nibbles (await first so registered output settles).
     """
     dut.is_parallel.value = 1
     dut.par_space.value = 1  # MMIO
     dut.par_we.value = 0
+    dut.par_oe.value = 0
 
-    # Trigger MMIO read: assert par_oe for 1 cycle to latch mmio_rdata
+    # Reset nibble counter by toggling par_addr
+    dut.par_addr.value = (reg_idx + 1) & 0x3
+    await ClockCycles(dut.clk, 1)
     dut.par_addr.value = reg_idx & 0x3
+    await ClockCycles(dut.clk, 1)
+
+    # Trigger DCIM read (1 cycle par_oe latches mmio_rdata)
     dut.par_oe.value = 1
     await ClockCycles(dut.clk, 1)
 
-    # Reset nibble counter by toggling par_addr (change then change back)
+    # Reset nibble counter again (par_oe advanced it to 1)
     dut.par_oe.value = 0
     dut.par_addr.value = (reg_idx + 1) & 0x3
     await ClockCycles(dut.clk, 1)
     dut.par_addr.value = reg_idx & 0x3
     await ClockCycles(dut.clk, 1)
 
-    # Now nibble counter is at 0 and mmio_rdata is valid. Read 8 nibbles.
+    # Read 8 nibbles. Await THEN read so registered output is valid.
     dut.par_oe.value = 1
     word = 0
     for nibble_idx in range(8):
+        await ClockCycles(dut.clk, 1)
         nibble = int(dut.par_data_out.value)
         word |= (nibble & 0xF) << (nibble_idx * 4)
-        await ClockCycles(dut.clk, 1)
 
     dut.par_oe.value = 0
     await ClockCycles(dut.clk, 1)
