@@ -160,7 +160,7 @@ module tinymoa_decoder (
 
     // Compressed full register fields (non-prime, used in CI/CR/CSS types)
     wire [3:0] c_rs1 = instr[10:7];
-    wire [3:0] c_rs2 = instr[6:2];  // NOTE: upper bit ignored for RV32E (x0-x15 only)
+    wire [3:0] c_rs2 = instr[5:2];  // instr[6] always 0 for RV32E (x0-x15 only)
     wire [3:0] c_rd  = instr[10:7];
 
     always @(*) begin
