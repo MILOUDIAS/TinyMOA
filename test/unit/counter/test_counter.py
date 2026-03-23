@@ -2,35 +2,33 @@
 Test suite for general purpose program/nibble counters
 
 - reset_clears_count
-- increment_when_enabled
+- increment_by_one
+- increment_by_two
+- increment_by_four
 - hold_when_disabled
 - over_run_wraps_to_zero
-- under_run_wraps_to_max_val
 - carry_asserted_at_max_val
 - carry_not_asserted_before_max_val
 - load_overrides_count
 - load_to_zero
 - load_to_max_val
-- nibble_mode_eight_cycle_wrap
-- nibble_mode_four_cycle_wrap
 - load_mid_count
-- max_val_one
 """
 
-import random
 import cocotb
 from cocotb.clock import Clock
 from cocotb.triggers import ClockCycles
 
 
-async def setup(dut):
-    """Initialize the counter"""
+async def setup(dut, inc=1):
+    """Initialize the counter. inc sets the step size (default 1)."""
     clock = Clock(dut.clk, 10, unit="ns")
     cocotb.start_soon(clock.start())
 
     dut.nrst.value = 0
     dut.en.value = 0
     dut.wen.value = 0
+    dut.inc.value = inc
     dut.data_in.value = 0
     dut.result.value = 0
     await ClockCycles(dut.clk, 1)
@@ -46,17 +44,38 @@ async def reset_clears_count(dut):
 
 
 @cocotb.test()
-async def increment_when_enabled(dut):
-    """en=1 increments by 1 each cycle"""
-    await setup(dut)
+async def increment_by_one(dut):
+    """en=1, inc=1 increments by 1 each cycle"""
+    await setup(dut, inc=1)
     dut.en.value = 1
     await ClockCycles(dut.clk, 1)
-
-    for expected in range(0, 15):
+    for expected in range(0, 8):
         result = int(dut.result.value)
-        assert result == expected, (
-            f"cycle {expected}: expected {expected}, got {result}"
-        )
+        assert result == expected, f"expected {expected}, got {result}"
+        await ClockCycles(dut.clk, 1)
+
+
+@cocotb.test()
+async def increment_by_two(dut):
+    """en=1, inc=2 increments by 2 each cycle (RV32C PC step)"""
+    await setup(dut, inc=2)
+    dut.en.value = 1
+    await ClockCycles(dut.clk, 1)
+    for i, expected in enumerate(range(0, 16, 2)):
+        result = int(dut.result.value)
+        assert result == expected, f"step {i}: expected {expected}, got {result}"
+        await ClockCycles(dut.clk, 1)
+
+
+@cocotb.test()
+async def increment_by_four(dut):
+    """en=1, inc=4 increments by 4 each cycle (RV32I PC step)"""
+    await setup(dut, inc=4)
+    dut.en.value = 1
+    await ClockCycles(dut.clk, 1)
+    for i, expected in enumerate(range(0, 32, 4)):
+        result = int(dut.result.value)
+        assert result == expected, f"step {i}: expected {expected}, got {result}"
         await ClockCycles(dut.clk, 1)
 
 

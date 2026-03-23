@@ -12,8 +12,9 @@ module tinymoa_counter #(
 
     input en,
     input wen,
-    input  [DATA_WIDTH-1:0] data_in,
 
+    input  [3:0] inc,
+    input  [DATA_WIDTH-1:0] data_in,
     output [DATA_WIDTH-1:0] result,
     output c_out
 );
@@ -25,7 +26,7 @@ module tinymoa_counter #(
         else if (wen)
             count <= data_in;
         else if (en)
-            count <= count + 1;
+            count <= count + inc;
     end
 
     assign result = count;
