@@ -227,7 +227,9 @@ def verify_j_type(dut, rd, imm, is_jal=False, is_jalr=False, rs1=None):
     )
     assert dut.alu_opcode.value == 0b0000, "Jump uses ADD for address calculation"
     if rs1 is not None:
-        assert dut.rs1.value == rs1, f"rs1 mismatch: expected x{rs1}, got x{dut.rs1.value}"
+        assert dut.rs1.value == rs1, (
+            f"rs1 mismatch: expected x{rs1}, got x{dut.rs1.value}"
+        )
     verify_flags(dut, is_jal=(1 if is_jal else 0), is_jalr=(1 if is_jalr else 0))
 
 
