@@ -43,9 +43,9 @@ module tb_system (
     // Output decode
     wire       dbg_strobe    = uo[0];
     wire       dbg_frame_end = uo[1];
-    wire [2:0] par_nibble_idx = uo[6:4];
-    wire       par_rdy        = uo[7];
-    wire [3:0] par_data_out   = uio_out[7:4];
+    wire       par_rdy       = uo[3];
+    wire [3:0] par_addr_out  = uo[7:4];
+    wire [3:0] par_data_out  = uio_out[7:4];
 
     tinymoa_top dut (
         .clk     (clk),
