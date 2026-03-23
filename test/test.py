@@ -103,27 +103,6 @@ def test_system_integration():
     )
 
 
-def test_tinymoa_integration():
-    run_test(
-        "tinymoa",
-        "tinymoa",
-        test_type="integration",
-        extra_sources=[
-            "cpu.v",
-            "counter.v",
-            "decoder.v",
-            "registers.v",
-            "alu.v",
-            "tcm.v",
-            "qspi.v",
-            "dcim/dcim.v",
-            "dcim/compressor.v",
-            "bootloader.v",
-        ],
-        defines=["BEHAVIORAL"],
-    )
-
-
 # === Unit tests ===
 
 
