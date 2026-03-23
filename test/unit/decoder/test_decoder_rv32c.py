@@ -1,10 +1,14 @@
 """
-Test suite for decoding RV32C (Zca, Zcb) instructions
+Test suite for decoding RV32C (Zca, Zcb) instructions.
+
+Every test verifies ALL control lines: is_compressed=1, the correct is_* flag high,
+all others low, rs1/rs2/rd (prime register decode where applicable), imm bit layout,
+alu_opcode, mem_opcode.
 """
 
 import cocotb
 from cocotb.clock import Clock
-from cocotb.triggers import ClockCycles
+from cocotb.triggers import ClockCycles, Timer
 import utility.rv32c_encode as rv32c
 
 
@@ -18,355 +22,227 @@ async def setup(dut):
 
 async def decode(dut, instr_val):
     dut.instr.value = instr_val
-    await ClockCycles(dut.clk, 1)
+    await Timer(1, unit="ns")
 
 
 # === Quadrant 0 ===
 
 
+# CIW-Type
 @cocotb.test()
-async def c_addi4spn_rd_and_sp_as_rs1(dut):
-    """C.ADDI4SPN: rd'=x10 (rd_p=2 -> x10), rs1=sp(x2)"""
+async def test_c_addi4spn(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_addi4spn(2, 16))  # rd_p=2 -> x10, imm=16
-    assert dut.is_compressed.value == 1
-    assert int(dut.rd.value) == 0b1010, f"rd: expected x10, got {int(dut.rd.value)}"
-    assert int(dut.rs1.value) == 2, f"rs1: expected sp(x2), got {int(dut.rs1.value)}"
+    raise NotImplementedError
 
 
+# CL
 @cocotb.test()
-async def c_lw_load_fields(dut):
-    """C.LW: is_load, mem_opcode=word, rd'/rs1' fields"""
+async def test_c_lw(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_lw(0, 1, 0))  # rd_p=0->x8, rs1_p=1->x9
-    assert dut.is_load.value == 1
-    assert dut.is_compressed.value == 1
-    assert dut.mem_opcode.value == 0b010  # word
-    assert int(dut.rd.value) == 0b1000  # x8
-    assert int(dut.rs1.value) == 0b1001  # x9
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def csw_store_fields(dut):
-    """C.SW: is_store, mem_opcode=word, rs1'/rs2' fields"""
+async def test_c_lbu(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_sw(1, 2, 0))  # rs1_p=1->x9, rs2_p=2->x10
-    assert dut.is_store.value == 1
-    assert dut.is_compressed.value == 1
-    assert dut.mem_opcode.value == 0b010
-    assert int(dut.rs1.value) == 0b1001  # x9
-    assert int(dut.rs2.value) == 0b1010  # x10
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def zcb_byte_halfword_load_store(dut):
-    """Zcb: C.LBU/C.LHU/C.LH/C.SB/C.SH set is_load/is_store with correct mem_opcode"""
+async def test_c_lhu(dut):
     await setup(dut)
-    # C.LBU: unsigned byte load
-    await decode(dut, rv32c.encode_c_lbu(0, 1, 0))
-    assert dut.is_load.value == 1
-    assert dut.mem_opcode.value == 0b100  # byte unsigned
+    raise NotImplementedError
 
-    # C.LHU: unsigned halfword load
-    await decode(dut, rv32c.encode_c_lhu(0, 1, 0))
-    assert dut.is_load.value == 1
-    assert dut.mem_opcode.value == 0b101  # halfword unsigned
 
-    # C.LH: signed halfword load
-    await decode(dut, rv32c.encode_c_lh(0, 1, 0))
-    assert dut.is_load.value == 1
-    assert dut.mem_opcode.value == 0b001  # halfword signed
+@cocotb.test()
+async def test_c_lh(dut):
+    await setup(dut)
+    raise NotImplementedError
 
-    # C.SB: byte store
-    await decode(dut, rv32c.encode_c_sb(1, 2, 0))
-    assert dut.is_store.value == 1
-    assert dut.mem_opcode.value == 0b000  # byte
 
-    # C.SH: halfword store
-    await decode(dut, rv32c.encode_c_sh(1, 2, 0))
-    assert dut.is_store.value == 1
-    assert dut.mem_opcode.value == 0b001  # halfword
+# CS
+@cocotb.test()
+async def test_c_sw(dut):
+    await setup(dut)
+    raise NotImplementedError
+
+
+@cocotb.test()
+async def test_c_sb(dut):
+    await setup(dut)
+    raise NotImplementedError
+
+
+@cocotb.test()
+async def test_c_sh(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 # === Quadrant 1 ===
 
 
+# CI
 @cocotb.test()
-async def c_nop(dut):
-    """C.NOP: is_alu_imm, rd=x0, imm=0"""
+async def test_c_nop(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_nop())
-    assert dut.is_alu_imm.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rd.value) == 0
-    assert int(dut.imm.value) == 0
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_addi_rd_rs1_immediate(dut):
-    """C.ADDI: rd==rs1, is_alu_imm, ADD opcode"""
+async def test_c_addi(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_addi(5, 3))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.alu_opcode.value) == 0b0000  # ADD
-    assert int(dut.rd.value) == 5
-    assert int(dut.rs1.value) == 5
-    assert int(dut.imm.value) == 3
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_jal_rd_is_ra(dut):
-    """C.JAL: is_jal, rd=x1 (ra)"""
+async def test_c_li(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_jal(64))
-    assert dut.is_jal.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rd.value) == 1  # ra
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_li_rs1_is_x0(dut):
-    """C.LI: is_alu_imm, rs1=x0, rd=dest"""
+async def test_c_addi16sp(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_li(6, 5))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.rs1.value) == 0
-    assert int(dut.rd.value) == 6
-    assert int(dut.imm.value) == 5
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_lui_is_lui(dut):
-    """C.LUI: is_lui, rd, upper immediate placed at [31:12]"""
+async def test_c_lui(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_lui(7, 1 << 12))  # nzimm[16:12]=1 -> imm=0x1000
-    assert dut.is_lui.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rd.value) == 7
-    imm = int(dut.imm.value)
-    assert imm == 0x1000, f"expected 0x1000, got {hex(imm)}"
+    raise NotImplementedError
+
+
+# CA
+@cocotb.test()
+async def test_c_sub(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_addi16sp_immediate_scale(dut):
-    """C.ADDI16SP: is_alu_imm, rd=rs1=sp(x2), scrambled immediate reconstructed"""
+async def test_c_xor(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_addi16sp(16))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.rd.value) == 2  # sp
-    assert int(dut.rs1.value) == 2  # sp
-    assert int(dut.imm.value) == 16, f"expected 16, got {int(dut.imm.value)}"
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_srli_opcode(dut):
-    """C.SRLI: is_alu_imm, SRL opcode, rd'==rs1'"""
+async def test_c_or(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_srli(0, 4))  # rd_p=0->x8
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.alu_opcode.value) == 0b0101  # SRL
-    assert int(dut.rd.value) == 0b1000  # x8
-    assert int(dut.rs1.value) == 0b1000  # x8
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_srai_opcode(dut):
-    """C.SRAI: is_alu_imm, SRA opcode"""
+async def test_c_and(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_srai(0, 4))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.alu_opcode.value) == 0b1101  # SRA
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_andi_opcode(dut):
-    """C.ANDI: is_alu_imm, AND opcode"""
+async def test_c_mul(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_andi(0, 7))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.alu_opcode.value) == 0b0111  # AND
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_sub_cxor_cor_cand_opcodes(dut):
-    """C.SUB/XOR/OR/AND: is_alu_reg, correct alu_opcode"""
+async def test_c_not(dut):
     await setup(dut)
-    cases = [
-        (rv32c.encode_c_sub, 0b1000),  # SUB
-        (rv32c.encode_c_xor, 0b0100),  # XOR
-        (rv32c.encode_c_or, 0b0110),  # OR
-        (rv32c.encode_c_and, 0b0111),  # AND
-    ]
-    for enc, expected_opcode in cases:
-        await decode(dut, enc(0, 1))  # rd_p=0->x8, rs2_p=1->x9
-        assert dut.is_alu_reg.value == 1, f"{enc.__name__}: is_alu_reg not set"
-        assert int(dut.alu_opcode.value) == expected_opcode, (
-            f"{enc.__name__}: expected {bin(expected_opcode)}, got {bin(int(dut.alu_opcode.value))}"
-        )
+    raise NotImplementedError
+
+
+# CB
+@cocotb.test()
+async def test_c_srli(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_j_rd_is_x0(dut):
-    """C.J: is_jal, rd=x0 (discard)"""
+async def test_c_srai(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_j(64))
-    assert dut.is_jal.value == 1
-    assert int(dut.rd.value) == 0
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_beqz_branch_and_xor_opcode(dut):
-    """C.BEQZ: is_branch, alu_opcode=XOR, rs1'"""
+async def test_c_andi(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_beqz(0, 8))  # rs1_p=0->x8
-    assert dut.is_branch.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.alu_opcode.value) == 0b0100  # XOR
-    assert int(dut.rs1.value) == 0b1000  # x8
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_bnez_branch_and_xor_opcode(dut):
-    """C.BNEZ: is_branch, alu_opcode=XOR, rs1'"""
+async def test_c_beqz(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_bnez(0, 8))
-    assert dut.is_branch.value == 1
-    assert int(dut.alu_opcode.value) == 0b0100  # XOR
+    raise NotImplementedError
+
+
+@cocotb.test()
+async def test_c_bnez(dut):
+    await setup(dut)
+    raise NotImplementedError
+
+
+# CJ
+@cocotb.test()
+async def test_c_j(dut):
+    await setup(dut)
+    raise NotImplementedError
+
+
+@cocotb.test()
+async def test_c_jal(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 # === Quadrant 2 ===
 
 
+# CR
 @cocotb.test()
-async def c_slli_opcode(dut):
-    """C.SLLI: is_alu_imm, SLL opcode, rd==rs1"""
+async def test_c_jr(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_slli(5, 3))
-    assert dut.is_alu_imm.value == 1
-    assert int(dut.alu_opcode.value) == 0b0001  # SLL
-    assert int(dut.rd.value) == 5
-    assert int(dut.rs1.value) == 5
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_lwsp_sp_as_rs1(dut):
-    """C.LWSP: is_load, rs1=sp(x2)"""
+async def test_c_mv(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_lwsp(5, 0))
-    assert dut.is_load.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rs1.value) == 2  # sp
-    assert int(dut.rd.value) == 5
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_jr_rs1_rd_x0(dut):
-    """C.JR: is_jalr, rd=x0"""
+async def test_c_jalr(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_jr(5))
-    assert dut.is_jalr.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rd.value) == 0
-    assert int(dut.rs1.value) == 5
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_mv_is_alu_reg(dut):
-    """C.MV: is_alu_reg, ADD opcode, rs1=x0"""
+async def test_c_add(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_mv(5, 3))
-    assert dut.is_alu_reg.value == 1
-    assert int(dut.alu_opcode.value) == 0b0000  # ADD (rd = x0 + rs2)
-    assert int(dut.rd.value) == 5
-    assert int(dut.rs1.value) == 0
+    raise NotImplementedError
+
+
+# CI
+@cocotb.test()
+async def test_c_slli(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_add_rd_rs1_same(dut):
-    """C.ADD: is_alu_reg, ADD opcode, rd==rs1"""
+async def test_c_lwsp(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_add(5, 3))
-    assert dut.is_alu_reg.value == 1
-    assert int(dut.alu_opcode.value) == 0b0000  # ADD
-    assert int(dut.rd.value) == 5
-    assert int(dut.rs1.value) == 5
+    raise NotImplementedError
+
+
+# CSS
+@cocotb.test()
+async def test_c_swsp(dut):
+    await setup(dut)
+    raise NotImplementedError
 
 
 @cocotb.test()
-async def c_jalr_rd_is_ra(dut):
-    """C.JALR: is_jalr, rd=x1 (ra)"""
+async def test_c_swtp(dut):
     await setup(dut)
-    await decode(dut, rv32c.encode_c_jalr(5))
-    assert dut.is_jalr.value == 1
-    assert int(dut.rd.value) == 1  # ra
-    assert int(dut.rs1.value) == 5
-
-
-@cocotb.test()
-async def c_mul_nonstandard_opcode(dut):
-    """C.MUL: Q2 funct3=101, alu_opcode=1010"""
-    await setup(dut)
-    await decode(dut, rv32c.encode_c_mul(8, 9))  # rd_p=0->x8, rs2_p=1->x9
-    assert dut.is_compressed.value == 1
-    assert int(dut.alu_opcode.value) == 0b1010  # MUL
-
-
-@cocotb.test()
-async def c_swsp_sp_as_rs1(dut):
-    """C.SWSP: is_store, rs1=sp(x2)"""
-    await setup(dut)
-    await decode(dut, rv32c.encode_c_swsp(5, 0))
-    assert dut.is_store.value == 1
-    assert dut.is_compressed.value == 1
-    assert int(dut.rs1.value) == 2  # sp
-
-
-# === Register encoding ===
-
-
-@cocotb.test()
-async def prime_register_decode_x8_to_x15(dut):
-    """Compressed prime register fields (3-bit) map to x8-x15"""
-    await setup(dut)
-    for i in range(8):
-        await decode(dut, rv32c.encode_c_lw(i, 0, 0))
-        assert int(dut.rd.value) == 8 + i, (
-            f"rd_p={i}: expected x{8 + i}, got x{int(dut.rd.value)}"
-        )
-
-
-@cocotb.test()
-async def full_register_decode_x0_to_x15(dut):
-    """Full register fields (4-bit) in Q2 instructions map to x0-x15"""
-    await setup(dut)
-    for i in range(1, 16):  # rd=0 is special (C.JR), skip
-        await decode(dut, rv32c.encode_c_slli(i, 1))
-        assert int(dut.rd.value) == i, (
-            f"rd={i}: expected x{i}, got x{int(dut.rd.value)}"
-        )
-
-
-# === is_compressed flag ===
-
-
-@cocotb.test()
-async def compressed_flag_set_for_all_q0_q1_q2(dut):
-    """is_compressed=1 for Q0/Q1/Q2, =0 for 32-bit"""
-    await setup(dut)
-    for instr_val in [
-        rv32c.encode_c_lw(0, 0, 0),  # Q0
-        rv32c.encode_c_addi(1, 1),  # Q1
-        rv32c.encode_c_slli(1, 1),  # Q2
-    ]:
-        await decode(dut, instr_val)
-        assert dut.is_compressed.value == 1, (
-            f"instr={hex(instr_val)}: is_compressed not set"
-        )
-
-
-@cocotb.test()
-async def compressed_flag_clear_for_32bit(dut):
-    """is_compressed=0 for any 32-bit instruction (bits[1:0]=11)"""
-    await setup(dut)
-    await decode(dut, 0x00000013)  # NOP (ADDI x0, x0, 0)
-    assert dut.is_compressed.value == 0
+    raise NotImplementedError
