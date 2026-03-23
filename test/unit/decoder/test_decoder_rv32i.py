@@ -334,88 +334,102 @@ async def test_addi(dut):
     verify_i_type_alu(dut, alu_opcode=0b0000, rd=2, rs1=3, imm=100)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_slti(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_slti(rd=1, rs1=2, imm=50))
+    verify_i_type_alu(dut, alu_opcode=0b0010, rd=1, rs1=2, imm=50)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_sltiu(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_sltiu(rd=1, rs1=2, imm=50))
+    verify_i_type_alu(dut, alu_opcode=0b0011, rd=1, rs1=2, imm=50)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_xori(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_xori(rd=1, rs1=2, imm=0xFF))
+    verify_i_type_alu(dut, alu_opcode=0b0100, rd=1, rs1=2, imm=0xFF)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_ori(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_ori(rd=1, rs1=2, imm=0x0F))
+    verify_i_type_alu(dut, alu_opcode=0b0101, rd=1, rs1=2, imm=0x0F)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_andi(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_andi(rd=1, rs1=2, imm=0x0F))
+    verify_i_type_alu(dut, alu_opcode=0b0110, rd=1, rs1=2, imm=0x0F)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_slli(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_slli(rd=1, rs1=2, shamt=4))
+    verify_i_type_shift(dut, alu_opcode=0b1000, rd=1, rs1=2, shamt=4)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_srli(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_srli(rd=1, rs1=2, shamt=4))
+    verify_i_type_shift(dut, alu_opcode=0b1001, rd=1, rs1=2, shamt=4)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_srai(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_srai(rd=1, rs1=2, shamt=4))
+    verify_i_type_shift(dut, alu_opcode=0b1010, rd=1, rs1=2, shamt=4)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_lb(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_lb(rd=1, rs1=2, imm=8))
+    verify_i_type_load(dut, mem_opcode=MEM_BYTE, rd=1, rs1=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_lh(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_lh(rd=1, rs1=2, imm=8))
+    verify_i_type_load(dut, mem_opcode=MEM_HALF, rd=1, rs1=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_lw(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_lw(rd=1, rs1=2, imm=8))
+    verify_i_type_load(dut, mem_opcode=MEM_WORD, rd=1, rs1=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_lbu(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_lbu(rd=1, rs1=2, imm=8))
+    verify_i_type_load(dut, mem_opcode=MEM_BYTE_U, rd=1, rs1=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_lhu(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_lhu(rd=1, rs1=2, imm=8))
+    verify_i_type_load(dut, mem_opcode=MEM_HALF_U, rd=1, rs1=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_jalr(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_jalr(rd=1, rs1=2, imm=16))
+    verify_j_type(dut, rd=1, imm=16, is_jalr=True)
 
 
 # === S-Type ===
