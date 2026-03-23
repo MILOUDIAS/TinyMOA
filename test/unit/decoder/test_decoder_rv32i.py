@@ -219,13 +219,15 @@ def verify_b_type(dut, alu_opcode, rs1, rs2, imm):
     verify_flags(dut, is_branch=1)
 
 
-def verify_j_type(dut, rd, imm, is_jal=False, is_jalr=False):
+def verify_j_type(dut, rd, imm, is_jal=False, is_jalr=False, rs1=None):
     """Verify J-type jump instruction decodes (JAL 0x6F or JALR 0x67)"""
     assert dut.rd.value == rd, f"rd mismatch: expected x{rd}, got x{dut.rd.value}"
     assert dut.imm.value.to_signed() == imm, (
         f"Immediate mismatch: expected {imm}, got {dut.imm.value.to_signed()}"
     )
     assert dut.alu_opcode.value == 0b0000, "Jump uses ADD for address calculation"
+    if rs1 is not None:
+        assert dut.rs1.value == rs1, f"rs1 mismatch: expected x{rs1}, got x{dut.rs1.value}"
     verify_flags(dut, is_jal=(1 if is_jal else 0), is_jalr=(1 if is_jalr else 0))
 
 
@@ -426,91 +428,134 @@ async def test_lhu(dut):
 
 
 @cocotb.test()
+async def test_lw_neg_imm(dut):
+    await setup(dut)
+    await decode(dut, rv32i.encode_lw(rd=1, rs1=2, imm=-16))
+    verify_i_type_load(dut, mem_opcode=MEM_WORD, rd=1, rs1=2, imm=-16)
+
+
+@cocotb.test()
 async def test_jalr(dut):
     await setup(dut)
     await decode(dut, rv32i.encode_jalr(rd=1, rs1=2, imm=16))
-    verify_j_type(dut, rd=1, imm=16, is_jalr=True)
+    verify_j_type(dut, rd=1, imm=16, is_jalr=True, rs1=2)
+
+
+@cocotb.test()
+async def test_jalr_neg_imm(dut):
+    await setup(dut)
+    await decode(dut, rv32i.encode_jalr(rd=3, rs1=5, imm=-8))
+    verify_j_type(dut, rd=3, imm=-8, is_jalr=True, rs1=5)
 
 
 # === S-Type ===
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_sb(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_sb(rs1=2, rs2=3, imm=20))
+    verify_s_type(dut, mem_opcode=MEM_BYTE, rs1=2, rs2=3, imm=20)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_sh(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_sh(rs1=2, rs2=3, imm=-4))
+    verify_s_type(dut, mem_opcode=MEM_HALF, rs1=2, rs2=3, imm=-4)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_sw(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_sw(rs1=2, rs2=3, imm=100))
+    verify_s_type(dut, mem_opcode=MEM_WORD, rs1=2, rs2=3, imm=100)
 
 
 # === B-Type ===
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_beq(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_beq(rs1=1, rs2=2, imm=8))
+    verify_b_type(dut, alu_opcode=0b0001, rs1=1, rs2=2, imm=8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_bne(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_bne(rs1=1, rs2=2, imm=-8))
+    verify_b_type(dut, alu_opcode=0b0001, rs1=1, rs2=2, imm=-8)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_blt(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_blt(rs1=3, rs2=4, imm=16))
+    verify_b_type(dut, alu_opcode=0b0010, rs1=3, rs2=4, imm=16)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_bge(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_bge(rs1=3, rs2=4, imm=-16))
+    verify_b_type(dut, alu_opcode=0b0010, rs1=3, rs2=4, imm=-16)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_bltu(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_bltu(rs1=5, rs2=6, imm=4))
+    verify_b_type(dut, alu_opcode=0b0011, rs1=5, rs2=6, imm=4)
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_bgeu(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_bgeu(rs1=5, rs2=6, imm=-4))
+    verify_b_type(dut, alu_opcode=0b0011, rs1=5, rs2=6, imm=-4)
 
 
 # === U-Type ===
 
 
-@cocotb.test(skip=True)
-async def test_lui(dut):
-    await setup(dut)
-    raise NotImplementedError
-
-
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_auipc(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_auipc(rd=2, imm=0xFF))
+    verify_u_type(dut, rd=2, imm=0xFF000, is_auipc=True)
+
+
+@cocotb.test()
+async def test_lui(dut):
+    await setup(dut)
+    await decode(dut, rv32i.encode_lui(rd=1, imm=0x12345))
+    verify_u_type(dut, rd=1, imm=0x12345000, is_lui=True)
 
 
 # === J-Type ===
 
 
-@cocotb.test(skip=True)
+@cocotb.test()
 async def test_jal(dut):
     await setup(dut)
-    raise NotImplementedError
+    await decode(dut, rv32i.encode_jal(rd=1, imm=256))
+    verify_j_type(dut, rd=1, imm=256, is_jal=True)
+
+
+# === SYSTEM ===
+
+
+@cocotb.test()
+async def test_ecall(dut):
+    await setup(dut)
+    await decode(dut, rv32i.encode_ecall())
+    verify_system_type(dut)
+
+
+@cocotb.test()
+async def test_ebreak(dut):
+    await setup(dut)
+    await decode(dut, rv32i.encode_ebreak())
+    verify_system_type(dut)

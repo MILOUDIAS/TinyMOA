@@ -67,7 +67,7 @@ module tinymoa_decoder (
     // [6:0]   opcode
 
     // U-Type instructions:
-    // [31:11] imm[31:12]
+    // [31:12] imm[31:12]
     // [11:7]  rd
     // [6:0]   opcode
 
@@ -249,28 +249,47 @@ module tinymoa_decoder (
                 end
 
                 // === S-Type instructions ===
+                // imm[11:5] = instr[31:25], imm[4:0] = instr[11:7]
+                // funct3: SB=000, SH=001, SW=010
                 5'b01000: begin
-                    is_store = 1'b1;
+                    is_store   = 1'b1;
+                    imm        = {{20{instr[31]}}, instr[31:25], instr[11:7]};
+                    mem_opcode = {1'b0, funct3[1:0]};
                 end
 
                 // === B-Type instructions ===
+                // imm[12|10:5] = instr[31:25], imm[4:1|11] = instr[11:7]
+                // funct3: BEQ=000, BNE=001, BLT=100, BGE=101, BLTU=110, BGEU=111
                 5'b11000: begin
                     is_branch = 1'b1;
+                    imm       = {{19{instr[31]}}, instr[31], instr[7], instr[30:25], instr[11:8], 1'b0};
+                    case (funct3)
+                        3'b000, 3'b001: alu_opcode = 4'b0001; // BEQ/BNE -> SUB
+                        3'b100, 3'b101: alu_opcode = 4'b0010; // BLT/BGE -> SLT
+                        3'b110, 3'b111: alu_opcode = 4'b0011; // BLTU/BGEU -> SLTU
+                        default:        alu_opcode = 4'b0001;
+                    endcase
                 end
 
-                // === U-Type instructions ===
-                5'b00101: begin // AUIPC only
+                // === U-Type: AUIPC ===
+                // imm[31:12] = instr[31:12], imm[11:0] = 0
+                5'b00101: begin
                     is_auipc = 1'b1;
+                    imm      = {instr[31:12], 12'b0};
                 end
 
-                // === U-Type instructions ===
-                5'b01101: begin // LUI only
+                // === U-Type: LUI ===
+                // imm[31:12] = instr[31:12], imm[11:0] = 0
+                5'b01101: begin
                     is_lui = 1'b1;
+                    imm    = {instr[31:12], 12'b0};
                 end
 
-                // === J-Type instructions ===
-                5'b11011: begin // JAL only
+                // === J-Type: JAL ===
+                // imm[20|10:1|11|19:12] scrambled across instr[31:12]
+                5'b11011: begin
                     is_jal = 1'b1;
+                    imm    = {{11{instr[31]}}, instr[31], instr[19:12], instr[20], instr[30:21], 1'b0};
                 end
 
                 // === SYSTEM instructions ===
