@@ -171,7 +171,7 @@ def verify_c_alu_imm(dut, alu_opcode, rd, rs1, imm):
 def verify_c_load(dut, mem_opcode, rd, rs1, imm):
     """CL-type/CI-type: C.LW, C.LBU, C.LHU, C.LH, C.LWSP"""
     assert dut.mem_opcode.value == mem_opcode, (
-        f"mem_opcode: expected {mem_opcode:#05b}, got {dut.mem_opcode.value:#05b}"
+        f"mem_opcode: expected {mem_opcode:x05b}, got {dut.mem_opcode.value:x05b}"
     )
     assert dut.rd.value == rd, f"rd:  expected x{rd}, got x{dut.rd.value}"
     assert dut.rs1.value == rs1, f"rs1: expected x{rs1}, got x{dut.rs1.value}"
@@ -235,7 +235,6 @@ def verify_c_lui(dut, rd, imm):
 # === Quadrant 0 ===
 
 
-# CIW-Type
 @cocotb.test()
 async def test_c_addi4spn(dut):
     # C.ADDI4SPN rd', nzuimm -> addi rd', x2, nzuimm
@@ -253,7 +252,6 @@ async def test_c_addi4spn_max(dut):
     verify_c_alu_imm(dut, alu_opcode=0b0000, rd=15, rs1=2, imm=1020)
 
 
-# CL
 @cocotb.test()
 async def test_c_lw(dut):
     # C.LW rd', imm(rs1') -> lw rd', imm(rs1')
@@ -303,7 +301,6 @@ async def test_c_lh(dut):
     verify_c_load(dut, mem_opcode=MEM_HALF, rd=8, rs1=9, imm=2)
 
 
-# CS
 @cocotb.test()
 async def test_c_sw(dut):
     # C.SW rs2', imm(rs1') -> sw rs2', imm(rs1')
@@ -342,7 +339,6 @@ async def test_c_sh(dut):
 # === Quadrant 1 ===
 
 
-# CI
 @cocotb.test()
 async def test_c_nop(dut):
     await setup(dut)
@@ -410,7 +406,6 @@ async def test_c_lui_neg(dut):
     verify_c_lui(dut, rd=5, imm=0xFFFFF000)
 
 
-# CA
 @cocotb.test()
 async def test_c_sub(dut):
     await setup(dut)
@@ -484,7 +479,6 @@ async def test_c_sext_h(dut):
     raise NotImplementedError
 
 
-# CB
 @cocotb.test()
 async def test_c_srli(dut):
     await setup(dut)
@@ -529,7 +523,6 @@ async def test_c_bnez(dut):
     verify_c_branch(dut, rs1=8, imm=-2)
 
 
-# CJ
 @cocotb.test()
 async def test_c_j(dut):
     # rd always x0 (no link)
@@ -563,7 +556,6 @@ async def test_c_jal_neg(dut):
 # === Quadrant 2 ===
 
 
-# CR
 @cocotb.test()
 async def test_c_jr(dut):
     # C.JR rs1  ->  jalr x0, 0(rs1)
@@ -607,7 +599,6 @@ async def test_c_add(dut):
     verify_c_alu_reg(dut, alu_opcode=0b0000, rd=5, rs2=6)
 
 
-# CI
 @cocotb.test()
 async def test_c_slli(dut):
     # C.SLLI rd, shamt  ->  slli rd, rd, shamt
@@ -632,7 +623,6 @@ async def test_c_lwsp_max(dut):
     verify_c_load(dut, mem_opcode=MEM_WORD, rd=5, rs1=2, imm=252)
 
 
-# CSS
 @cocotb.test()
 async def test_c_swsp(dut):
     # C.SWSP rs2, imm(sp)  ->  sw rs2, imm(x2)

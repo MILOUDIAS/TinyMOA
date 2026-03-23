@@ -308,73 +308,252 @@ module tinymoa_decoder (
             case (quadrant)
 
                 // === Quadrant 0 ===
-                // f3=000  C.ADDI4SPN  CIW  rd'=c_rdp, rs1=x2, imm[9:2]
-                // f3=010  C.LW        CL   rd'=c_rdp, rs1'=c_rs1p, imm[6:2]
-                // f3=100  C.LBU       Zcb  rd'=c_rdp, rs1'=c_rs1p, imm[1:0]
-                // f3=100  C.LHU       Zcb  rd'=c_rdp, rs1'=c_rs1p, imm[1]
-                // f3=100  C.LH        Zcb  rd'=c_rdp, rs1'=c_rs1p, imm[1]
+                // f3=000  C.ADDI4SPN  CIW  rd'=c_rdp,   rs1=x2,      imm[9:2]
+                // f3=010  C.LW        CL   rd'=c_rdp,   rs1'=c_rs1p, imm[6:2]
+                // f3=100  C.LBU       Zcb  rd'=c_rdp,   rs1'=c_rs1p, imm[1:0]
+                // f3=100  C.LHU       Zcb  rd'=c_rdp,   rs1'=c_rs1p, imm[1]
+                // f3=100  C.LH        Zcb  rd'=c_rdp,   rs1'=c_rs1p, imm[1]
                 // f3=100  C.SB        Zcb  rs1'=c_rs1p, rs2'=c_rs2p, imm[1:0]
                 // f3=100  C.SH        Zcb  rs1'=c_rs1p, rs2'=c_rs2p, imm[1]
                 // f3=110  C.SW        CS   rs1'=c_rs1p, rs2'=c_rs2p, imm[6:2]
                 2'b00: begin
                     case (c_funct3)
-                        default: begin end
+                        3'b000: begin // C.ADDI4SPN
+                            is_alu_imm = 1'b1;
+                            alu_opcode = 4'b0000;
+                            rs1        = 4'd2; // x2 (sp)
+                            rd         = c_rdp;
+                            imm        = {24'b0, instr[10:7], instr[12:11], instr[5], instr[6], 2'b00};
+                        end
+                        3'b010: begin // C.LW
+                            is_load    = 1'b1;
+                            mem_opcode = 3'b010;
+                            rs1        = c_rs1p;
+                            rd         = c_rdp;
+                            imm        = {25'b0, instr[5], instr[12:10], instr[6], 2'b00};
+                        end
+                        3'b100: begin
+                            case (instr[11:10])
+                                2'b00: begin // C.LBU
+                                    is_load    = 1'b1;
+                                    mem_opcode = 3'b100;
+                                    rs1        = c_rs1p;
+                                    rd         = c_rdp;
+                                    imm        = {30'b0, instr[5], instr[6]};
+                                end
+                                2'b01: begin
+                                    if (instr[6]) begin // C.LH (signed)
+                                        is_load    = 1'b1;
+                                        mem_opcode = 3'b001;
+                                        rs1        = c_rs1p;
+                                        rd         = c_rdp;
+                                        imm        = {30'b0, instr[5], 1'b0};
+                                    end else begin // C.LHU (unsigned)
+                                        is_load    = 1'b1;
+                                        mem_opcode = 3'b101;
+                                        rs1        = c_rs1p;
+                                        rd         = c_rdp;
+                                        imm        = {30'b0, instr[5], instr[6]};
+                                    end
+                                end
+                                2'b10: begin // C.SB
+                                    is_store   = 1'b1;
+                                    mem_opcode = 3'b000;
+                                    rs1        = c_rs1p;
+                                    rs2        = c_rs2p;
+                                    imm        = {30'b0, instr[5], instr[6]};
+                                end
+                                2'b11: begin // C.SH
+                                    is_store   = 1'b1;
+                                    mem_opcode = 3'b001;
+                                    rs1        = c_rs1p;
+                                    rs2        = c_rs2p;
+                                    imm        = {30'b0, instr[5], 1'b0};
+                                end
+                            endcase
+                        end
+                        3'b110: begin // C.SW
+                            is_store   = 1'b1;
+                            mem_opcode = 3'b010;
+                            rs1        = c_rs1p;
+                            rs2        = c_rs2p;
+                            imm        = {24'b0, instr[5], instr[12:10], instr[6], 2'b00};
+                        end
                     endcase
                 end
 
                 // === Quadrant 1 ===
                 // f3=000  C.NOP       CI   (rd=x0, imm=0)
-                // f3=000  C.ADDI      CI   rd=c_rd, rs1=c_rd, imm[5:0] sign-ext  (rd!=0, imm!=0)
-                // f3=001  C.JAL       CJ   rd=x1, imm[11:1] scrambled  (RV32C only)
-                // f3=010  C.LI        CI   rd=c_rd, rs1=x0, imm[5:0] sign-ext
-                // f3=011  C.ADDI16SP  CI   rd=x2, rs1=x2, nzimm[9:4] scaled*16  (rd==2)
-                // f3=011  C.LUI       CI   rd=c_rd, nzimm[17:12] -> {imm,12'b0}  (rd!=0,2)
-                // f3=100  C.SRLI      CB   rd'=c_rs1p, shamt[5:0]       (instr[11:10]=00)
-                // f3=100  C.SRAI      CB   rd'=c_rs1p, shamt[5:0]       (instr[11:10]=01)
-                // f3=100  C.ANDI      CB   rd'=c_rs1p, imm[5:0] sign-ext  (instr[11:10]=10)
-                // f3=100  C.SUB       CA   rd'=c_rs1p, rs2'=c_rs2p  (instr[11:10]=11, instr[12]=0, instr[6:5]=00)
-                // f3=100  C.XOR       CA   rd'=c_rs1p, rs2'=c_rs2p  (instr[11:10]=11, instr[12]=0, instr[6:5]=01)
-                // f3=100  C.OR        CA   rd'=c_rs1p, rs2'=c_rs2p  (instr[11:10]=11, instr[12]=0, instr[6:5]=10)
-                // f3=100  C.AND       CA   rd'=c_rs1p, rs2'=c_rs2p  (instr[11:10]=11, instr[12]=0, instr[6:5]=11)
-                // f3=100  C.MUL       Zcb  rd'=c_rs1p, rs2'=c_rs2p  (instr[11:10]=11, instr[12]=1, instr[6:5]=10)
-                // f3=100  C.NOT       Zcb  rd'=c_rs1p                (instr[11:10]=11, instr[12]=1, instr[6:5]=00)
-                // f3=101  C.J         CJ   rd=x0, imm[11:1] scrambled
-                // f3=110  C.BEQZ      CB   rs1'=c_rs1p, rs2=x0, imm[8:1] scrambled
-                // f3=111  C.BNEZ      CB   rs1'=c_rs1p, rs2=x0, imm[8:1] scrambled
+                // f3=000  C.ADDI      CI   rd=c_rd,    rs1=c_rd, imm[5:0]   sign-ext          (rd!=0, imm!=0)
+                // f3=001  C.JAL       CJ   rd=x1,      imm[11:1]            (scrambled)
+                // f3=010  C.LI        CI   rd=c_rd,    rs1=x0,   imm[5:0]   sign-ext
+                // f3=011  C.ADDI16SP  CI   rd=x2,      rs1=x2,   nzimm[9:4] scaled*16         (rd==2)
+                // f3=011  C.LUI       CI   rd=c_rd,              nzimm[17:12] -> {imm,12'b0}  (rd!=0,2)
+                // f3=100  C.SRLI      CB   rd'=c_rs1p, shamt[5:0]           (instr[11:10]=00)
+                // f3=100  C.SRAI      CB   rd'=c_rs1p, shamt[5:0]           (instr[11:10]=01)
+                // f3=100  C.ANDI      CB   rd'=c_rs1p, imm[5:0] sign-ext    (instr[11:10]=10)
+                // f3=100  C.SUB       CA   rd'=c_rs1p, rs2'=c_rs2p          (instr[11:10]=11, instr[12]=0, instr[6:5]=00)
+                // f3=100  C.XOR       CA   rd'=c_rs1p, rs2'=c_rs2p          (instr[11:10]=11, instr[12]=0, instr[6:5]=01)
+                // f3=100  C.OR        CA   rd'=c_rs1p, rs2'=c_rs2p          (instr[11:10]=11, instr[12]=0, instr[6:5]=10)
+                // f3=100  C.AND       CA   rd'=c_rs1p, rs2'=c_rs2p          (instr[11:10]=11, instr[12]=0, instr[6:5]=11)
+                // f3=100  C.MUL       Zcb  rd'=c_rs1p, rs2'=c_rs2p          (instr[11:10]=11, instr[12]=1, instr[6:5]=10)
+                // f3=100  C.NOT       Zcb  rd'=c_rs1p                       (instr[11:10]=11, instr[12]=1, instr[6:5]=00)
+                // f3=101  C.J         CJ   rd=x0,      imm[11:1]            (scrambled)
+                // f3=110  C.BEQZ      CB   rs1'=c_rs1p, rs2=x0,   imm[8:1]  (scrambled)
+                // f3=111  C.BNEZ      CB   rs1'=c_rs1p, rs2=x0,   imm[8:1]  (scrambled)
                 2'b01: begin
                     case (c_funct3)
-                        default: begin end
+                        3'b000: begin // C.NOP / C.ADDI
+                            is_alu_imm = 1'b1;
+                            alu_opcode = 4'b0000;
+                            rd         = c_rd;
+                            rs1        = c_rd;
+                            imm        = {{26{instr[12]}}, instr[12], instr[6:2]};
+                        end
+                        3'b001: begin // C.JAL
+                            is_jal = 1'b1;
+                            rd     = 4'd1;
+                            imm    = {{21{instr[12]}}, instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 1'b0};
+                        end
+                        3'b010: begin // C.LI
+                            is_alu_imm = 1'b1;
+                            alu_opcode = 4'b0000;
+                            rd         = c_rd;
+                            rs1        = 4'd0;
+                            imm        = {{26{instr[12]}}, instr[12], instr[6:2]};
+                        end
+                        3'b011: begin // C.ADDI16SP (rd==2) / C.LUI (rd!=2)
+                            if (c_rd == 4'd2) begin // C.ADDI16SP
+                                is_alu_imm = 1'b1;
+                                alu_opcode = 4'b0000;
+                                rd         = 4'd2;
+                                rs1        = 4'd2;
+                                imm        = {{23{instr[12]}}, instr[4:3], instr[5], instr[2], instr[6], 4'b0};
+                            end else begin           // C.LUI
+                                is_lui = 1'b1;
+                                rd     = c_rd;
+                                imm    = {{14{instr[12]}}, instr[12], instr[6:2], 12'b0};
+                            end
+                        end
+                        3'b100: begin
+                            case (instr[11:10])
+                                2'b00: begin // C.SRLI
+                                    is_alu_imm = 1'b1;
+                                    alu_opcode = 4'b1001;
+                                    rd         = c_rs1p;
+                                    rs1        = c_rs1p;
+                                    imm        = {26'b0, instr[12], instr[6:2]};
+                                end
+                                2'b01: begin // C.SRAI
+                                    is_alu_imm = 1'b1;
+                                    alu_opcode = 4'b1010;
+                                    rd         = c_rs1p;
+                                    rs1        = c_rs1p;
+                                    imm        = {26'b0, instr[12], instr[6:2]};
+                                end
+                                2'b10: begin // C.ANDI
+                                    is_alu_imm = 1'b1;
+                                    alu_opcode = 4'b0110;
+                                    rd         = c_rs1p;
+                                    rs1        = c_rs1p;
+                                    imm        = {{26{instr[12]}}, instr[12], instr[6:2]};
+                                end
+                                2'b11: begin
+                                    case ({instr[12], instr[6:5]})
+                                        3'b000: begin // C.SUB
+                                            is_alu_reg = 1'b1;
+                                            alu_opcode = 4'b0001;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            rs2        = c_rs2p;
+                                        end
+                                        3'b001: begin // C.XOR
+                                            is_alu_reg = 1'b1;
+                                            alu_opcode = 4'b0100;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            rs2        = c_rs2p;
+                                        end
+                                        3'b010: begin // C.OR
+                                            is_alu_reg = 1'b1;
+                                            alu_opcode = 4'b0101;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            rs2        = c_rs2p;
+                                        end
+                                        3'b011: begin // C.AND
+                                            is_alu_reg = 1'b1;
+                                            alu_opcode = 4'b0110;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            rs2        = c_rs2p;
+                                        end
+                                        3'b110: begin // C.MUL (Zcb)
+                                            is_alu_reg = 1'b1;
+                                            alu_opcode = 4'b1011;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            rs2        = c_rs2p;
+                                        end
+                                        3'b100: begin // C.NOT (Zcb)
+                                            is_alu_imm = 1'b1;
+                                            alu_opcode = 4'b0100;
+                                            rd         = c_rs1p;
+                                            rs1        = c_rs1p;
+                                            imm        = 32'hFFFFFFFF;
+                                        end
+                                    endcase
+                                end
+                            endcase
+                        end
+                        3'b101: begin // C.J
+                            is_jal = 1'b1;
+                            rd     = 4'd0;
+                            imm    = {{21{instr[12]}}, instr[8], instr[10:9], instr[6], instr[7], instr[2], instr[11], instr[5:3], 1'b0};
+                        end
+                        3'b110: begin // C.BEQZ
+                            is_branch  = 1'b1;
+                            alu_opcode = 4'b0001;
+                            rs1        = c_rs1p;
+                            rs2        = 4'd0;
+                            imm        = {{24{instr[12]}}, instr[6:5], instr[2], instr[11:10], instr[4:3], 1'b0};
+                        end
+                        3'b111: begin // C.BNEZ
+                            is_branch  = 1'b1;
+                            alu_opcode = 4'b0001;
+                            rs1        = c_rs1p;
+                            rs2        = 4'd0;
+                            imm        = {{24{instr[12]}}, instr[6:5], instr[2], instr[11:10], instr[4:3], 1'b0};
+                        end
                     endcase
                 end
 
                 // === Quadrant 2 ===
-                // f3=000  C.SLLI      CI   rd=c_rd, rs1=c_rd, shamt[5:0]
-                // f3=010  C.LWSP      CI   rd=c_rd, rs1=x2, uimm[7:2]
-                // f3=100  C.JR        CR   rs1=c_rs1, rd=x0, imm=0       ({instr[12],rs2==0}=2'b01)
-                // f3=100  C.MV        CR   rd=c_rd, rs1=x0, rs2=c_rs2    ({instr[12],rs2==0}=2'b00)
-                // f3=100  C.EBREAK    CR   is_system                      ({instr[12],rs2==0}=2'b11, rs1==0)
-                // f3=100  C.JALR      CR   rd=x1, rs1=c_rs1, imm=0       ({instr[12],rs2==0}=2'b11, rs1!=0)
-                // f3=100  C.ADD       CR   rd=c_rd, rs1=c_rd, rs2=c_rs2  ({instr[12],rs2==0}=2'b10)
-                // f3=110  C.SWSP      CSS  rs1=x2, rs2=c_rs2, uimm[7:2]
-                // f3=111  C.SWTP      CSS  rs1=x4, rs2=c_rs2, uimm[7:2]  (custom)
+                // f3=000  C.SLLI      CI   rd=c_rd,   rs1=c_rd,  shamt[5:0]
+                // f3=010  C.LWSP      CI   rd=c_rd,   rs1=x2,    uimm[7:2]
+                // f3=100  C.JR        CR   rs1=c_rs1, rd=x0,     imm=0      ({instr[12],rs2==0}=2'b01)
+                // f3=100  C.MV        CR   rd=c_rd,   rs1=x0,    rs2=c_rs2  ({instr[12],rs2==0}=2'b00)
+                // f3=100  C.EBREAK    CR   is_system                        ({instr[12],rs2==0}=2'b11, rs1==0)
+                // f3=100  C.JALR      CR   rd=x1,     rs1=c_rs1, imm=0      ({instr[12],rs2==0}=2'b11, rs1!=0)
+                // f3=100  C.ADD       CR   rd=c_rd,   rs1=c_rd,  rs2=c_rs2  ({instr[12],rs2==0}=2'b10)
+                // f3=110  C.SWSP      CSS  rs1=x2,    rs2=c_rs2, uimm[7:2]
+                // f3=111  C.SWTP      CSS  rs1=x4,    rs2=c_rs2, uimm[7:2]  (custom)
                 2'b10: begin
                     case (c_funct3)
-                        3'b000: begin               // C.SLLI
+                        3'b000: begin // C.SLLI
                             is_alu_imm = 1'b1;
-                            alu_opcode = 4'b1000;   // SLL
+                            alu_opcode = 4'b1000;
                             rd         = c_rd;
                             rs1        = c_rs1;
                             imm        = {26'b0, instr[12], instr[6:2]};
                         end
-
-                        3'b010: begin               // C.LWSP
+                        3'b010: begin // C.LWSP
                             is_load    = 1'b1;
-                            mem_opcode = 3'b010;    // word
-                            rs1        = 4'd2;      // x2 (sp)
+                            mem_opcode = 3'b010; // word
+                            rs1        = 4'd2;   // x2 (sp)
                             rd         = c_rd;
                             imm        = {24'b0, instr[3:2], instr[12], instr[6:4], 2'b00};
                         end
-
                         3'b100: begin
                             case ({instr[12], c_rs2 == 4'd0})
                                 2'b00: begin // C.MV
@@ -423,11 +602,8 @@ module tinymoa_decoder (
                             rs2        = c_rs2;
                             imm        = {24'b0, instr[8:7], instr[12:9], 2'b00};
                         end
-                        default: begin end
                     endcase
                 end
-
-                default: begin end
             endcase
         end
     end
