@@ -17,7 +17,7 @@ Key design decisions:
 |------|----|-----|---------|
 | CPU | TCM | Port A (R/W) | Instruction fetch, data load/store |
 | DCIM FSM | TCM | Port B (R/W) | Read weights + activations, write results |
-| Boot FSM | TCM | Port B (W) | Copy flash → TCM on reset |
+| Boot FSM | TCM | Port A (W) | Copy flash → TCM on reset |
 | Boot FSM | QSPI | Read | Fetch flash contents during boot |
 | CPU | QSPI | R/W | Flash read, PSRAM access (after boot) |
 | CPU | DCIM | MMIO (Port A) | Configure, start, poll status, read results |

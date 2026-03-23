@@ -5,13 +5,13 @@ On full device reset, the CPU is held in reset (`cpu_nrst = 0`) while a boot FSM
 ## Boot FSM
 
 ```
-RESET -> LOAD (read flash word → write TCM Port B, repeat 512×) → DONE → release CPU
+RESET -> LOAD (read flash word → write TCM Port A, repeat 512×) → DONE → release CPU
 ```
 
-- Boot FSM has priority over DCIM on TCM Port B during loading.
+- Boot FSM ONLY ACCESSES PORT A. NEVER PORT B.
 - No watchdog — if QSPI never responds, the CPU simply stays in reset.
 - Boot copies flash starting at a fixed flash offset into TCM `0x000000–0x000FFF` (or partial, TBD).
-- After `boot_done = 1`, Port B is handed to the DCIM exclusively.
+- After `boot_done = 1`, Port A is handed to the CPU exclusively. Boot FSM never runs again unless a full device reset occurs.
 
 ## CPU Start
 
