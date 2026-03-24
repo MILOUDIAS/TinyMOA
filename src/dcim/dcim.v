@@ -44,8 +44,8 @@
 `timescale 1ns / 1ps
 
 module tinymoa_dcim #(
-    parameter ARRAY_DIM = 16, // NxN array
-    parameter ACC_WIDTH = 9   // max value = N*(2^P-1)
+    parameter ARRAY_DIM = 32, // NxN array
+    parameter ACC_WIDTH = 11  // max value = N*(2^P-1)
 )(
     input clk,
     input nrst,
@@ -57,14 +57,12 @@ module tinymoa_dcim #(
     output reg [31:0] mmio_rdata,
     input      [5:0]  mmio_addr,
 
-    // TCM Port B only
     input      [31:0] mem_rdata,
     output reg [31:0] mem_wdata,
     output reg        mem_write,
     output reg        mem_read,
     output reg [9:0]  mem_addr,
 
-    // Debug
     output [2:0] dbg_state
 );
 
@@ -95,7 +93,9 @@ module tinymoa_dcim #(
     // XNOR + compressor wiring (combinational)
     // One tinymoa_compressor per column (16 rows).
     // popcount[col] range 0-16, 5 bits.
-    wire [4:0] comp_out [0:ARRAY_DIM-1];
+    // wire [4:0] comp_out [0:ARRAY_DIM-1]; // 16x16 array
+    wire [4:0] comp_lo_out [0:ARRAY_DIM-1]; // 32x32 array
+    wire [4:0] comp_hi_out [0:ARRAY_DIM-1]; // 32x32 array
     wire [5:0] popcount [0:ARRAY_DIM-1];
 
     genvar col;
@@ -103,12 +103,21 @@ module tinymoa_dcim #(
         for (col = 0; col < ARRAY_DIM; col = col + 1) begin : gen_col
             wire [ARRAY_DIM-1:0] xnor_bits = ~(weight_reg[col] ^ act_slice);
 
-            tinymoa_compressor comp (
-                .in  (xnor_bits),
-                .out (comp_out[col])
+            tinymoa_compressor comp_lo (
+                .in  (xnor_bits[15:0]),
+                .out (comp_lo_out[col])
             );
 
-            assign popcount[col] = {1'b0, comp_out[col]};
+            tinymoa_compressor comp_hi (
+                .in  (xnor_bits[31:16]),
+                .out (comp_hi_out[col])
+            );
+
+            // for 16x16 output (1 compressor)
+            // assign popcount[col] = {1'b0, comp_out[col]};
+
+            // for 32x32 output (2 compressors)
+            assign popcount[col] = {1'b0, comp_lo_out[col]} + {1'b0, comp_hi_out[col]};
         end
     endgenerate
 

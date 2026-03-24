@@ -70,46 +70,33 @@ module tinymoa_top (
     reg [15:0] addr_reg;
     reg        addr_byte_idx;
 
-    // Read output
     reg [31:0] read_reg;
     reg [1:0]  read_byte_idx;
 
-    // UIO output
     reg [7:0] uio_out_reg;
     reg       uio_driving;
 
     assign uio_out = uio_out_reg;
     assign uio_oe  = uio_driving ? 8'hFF : 8'h00;
+    reg              out_ready;
+    reg              out_word_done;
 
-    // Status
-    reg out_ready;
-    reg out_word_done;
+    reg  [1:0]  ext_state;
+    reg         lat_target;
+    reg         lat_rw;
 
-    // ext_io FSM
-    localparam IDLE    = 2'd0;
-    localparam EXECUTE = 2'd1;
-    localparam WAIT    = 2'd2; // TCM read: one extra cycle for a_dout_r to settle
-    localparam LATCH   = 2'd3;
-
-    reg [1:0] ext_state;
-    reg       lat_target;
-    reg       lat_rw;
-
-    // TCM Port A
     reg         tcm_a_en;
     reg         tcm_a_wen;
     reg  [31:0] tcm_a_din;
     reg  [9:0]  tcm_a_addr;
     wire [31:0] tcm_a_dout;
 
-    // DCIM Port B
     wire [31:0] tcm_b_dout;
     wire [31:0] dcim_mem_wdata;
     wire        dcim_mem_write;
     wire        dcim_mem_read;
     wire [9:0]  dcim_mem_addr;
 
-    // DCIM MMIO
     reg         mmio_write;
     reg         mmio_read;
     reg  [31:0] mmio_wdata;
@@ -118,6 +105,11 @@ module tinymoa_top (
     wire        mmio_ready;
 
     wire [2:0] dcim_dbg_state;
+
+    localparam IDLE    = 2'd0;
+    localparam EXECUTE = 2'd1;
+    localparam WAIT    = 2'd2; // TCM read: one extra cycle for a_dout_r to settle
+    localparam LATCH   = 2'd3;
 
     always @(posedge clk or negedge nrst) begin
         if (!nrst) begin
