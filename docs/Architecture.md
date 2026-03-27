@@ -62,9 +62,9 @@ DCIM default base addresses in `dcim.v` match this layout (`cfg_weight_base = 0x
 
 1. Fetch `IF`: 1 cycle if TCM, stall >8 cycles if QSPI
 2. Decode `ID`: 1 cycle
-3. Execute `EX`: 8 cycles (all ALU ops produce 32-bit results, so 8 nibbles always)
-4. Writeback `WB`: 1 cycle (update flags and PC)
-5. Memory `MEM`: 1 cycle if TCM, stall >8 cycles if QSPI (load/store only, wait for mem_ready)
+3. Execute `EX`: 1 cycle
+4. Memory `MEM`: 1 cycle if TCM, stall >8 cycles if QSPI (load/store only, wait for mem_ready)
+5. Writeback `WB`: 1 cycle (update flags and PC)
 
 Note: the ALU result is fully computed after 8 clock edges but requires 1 additional cycle for the final nibble's NBA to resolve before reading. Effectively 8+1 for external consumers.
 
@@ -136,3 +136,55 @@ ABC/src/
     ├── dcim.v         DCIM accelerator (crossbar + compressor + FSM)
     └── compressor.v   16-input approximate/exact popcount compressor
 ```
+
+## Pin Map
+
+Two operating modes selected by `ui[0]` (is_parallel). Debug mode overlay via `ui[7]` (dbg_en).
+
+| Pin | SER (QSPI, ui[0]=0) | PAR (ui[0]=1) | Notes |
+|-----|---------------------|---------------|-------|
+| `ui[0]` | is_parallel = 0 | is_parallel = 1 | mode select |
+| `ui[1]` | unused | par_space: 0=CPU/TCM-A, 1=DCIM/TCM-B | port select |
+| `ui[2]` | unused | par_cpu_nrst: 0=hold CPU reset, 1=run | |
+| `ui[3]` | unused | par_we: write strobe | |
+| `ui[4]` | unused | par_oe: read strobe | |
+| `ui[5]` | unused | par_addr[0] | word address bit 0 |
+| `ui[6]` | unused | par_addr[1] | word address bit 1 |
+| `ui[7]` | dbg_en: freeze+stream | dbg_en: freeze+stream | asserted = cpu_clk gated |
+| `uo[0]` | dbg_strobe: serial stream 1 bit/clk | same | see debug frame below |
+| `uo[1]` | dbg_frame_end: 1-cycle pulse per frame | same | FPGA uses to resync |
+| `uo[2]` | qspi_oe | unused | |
+| `uo[3]` | qspi_sck | par_ready | commit pulse in PAR |
+| `uo[4]` | qspi_ncs_flash | addr[0] | |
+| `uo[5]` | qspi_ncs_ram_a | addr[1] |  |
+| `uo[6]` | qspi_ncs_ram_b | addr[2] |  |
+| `uo[7]` | qspi_ncs_peri | addr[3] |  |
+| `uio[7:4]` | qspi_io[3:0] bidir | par_data[3:0] bidir | QSPI quad data / PAR nibble |
+| `uio[3:0]` | unused | unused | reserved |
+
+## Debug Frame
+
+Streamed serially on `uo[0]` (dbg_strobe), MSB first, 1 bit per clock.
+`uo[1]` (dbg_frame_end) pulses high for 1 cycle after the last bit, then frame repeats.
+When `ui[7]` (dbg_en) asserts, `cpu_clk` is gated and all signals are snapshotted.
+
+Total frame = 144 bits.
+
+| Order | Field | Bits | Source |
+|-------|-------|------|--------|
+| 1 | sync | 8 | constant 8'hAA |
+| 2 | cpu_state | 3 | CPU FSM (FETCH/DECODE/EXECUTE/MEM/WB) |
+| 3 | cpu_pc | 24 | program counter at snapshot |
+| 4 | cpu_instr | 32 | instruction register at snapshot |
+| 5 | dec_alu_opcode | 4 | decoder ALU opcode |
+| 6 | dec_mem_opcode | 3 | decoder MEM opcode (load/store size+sign) |
+| 7 | dec_rs1 | 4 | source register 1 index |
+| 8 | dec_rs2 | 4 | source register 2 index |
+| 9 | dec_rd | 4 | destination register index |
+| 10 | dec_flags | 11 | {is_load, is_store, is_branch, is_jal, is_jalr, is_lui, is_auipc, is_alu_reg, is_alu_imm, is_system, is_compressed} |
+| 11 | branch_taken | 1 | resolved branch decision |
+| 12 | alu_result | 32 | ALU output at snapshot |
+| 13 | dcim_state | 3 | DCIM FSM (IDLE/LOAD_WEIGHTS/FETCH_ACT/COMPUTE/STORE_RESULT/DONE) |
+| 14 | par_nibble_idx | 3 | current PAR nibble counter |
+| 15 | end | 8 | constant 8'h55 |
+| | **Total** | **144** | |
